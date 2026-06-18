@@ -20,6 +20,7 @@ type Hud = {
   heldItem: string | null;
   inventory: number;
   outsideFinal: boolean;
+  trashDelivered: number;
   tasks: Record<TaskKey, boolean>;
 };
 
@@ -40,6 +41,8 @@ type MonsterAi = {
   active: boolean;
   emerging: number;
 };
+
+const assetUrl = (name: string) => `${import.meta.env.BASE_URL}assets/${name}.png`;
 
 type BanditAi = {
   mesh: THREE.Group;
@@ -272,6 +275,37 @@ function makeCart(pos: [number, number, number]) {
   return group;
 }
 
+function makeTrashBag(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x050505,
+    roughness: 0.92,
+    metalness: 0,
+  });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 14), mat);
+  body.position.y = 0.36;
+  body.scale.set(1, 0.82, 0.78);
+  const knot = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.32, 12), mat);
+  knot.position.y = 0.82;
+  const wrinkleMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.98 });
+  for (let i = 0; i < 6; i += 1) {
+    const wrinkle = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.34, 0.02), wrinkleMat);
+    wrinkle.position.set(Math.cos(i) * 0.28, 0.42, Math.sin(i) * 0.22);
+    wrinkle.rotation.y = i;
+    group.add(wrinkle);
+  }
+  group.add(body, knot);
+  group.position.set(...pos);
+  group.userData.kind = 'trashBag';
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
 function makeHandBasket(pos: [number, number, number]) {
   const group = new THREE.Group();
   const plastic = new THREE.MeshStandardMaterial({ color: 0xd82632, roughness: 0.42, metalness: 0.02 });
@@ -499,9 +533,11 @@ export default function App() {
     keys: Record<string, boolean>;
     customers: CustomerAi[];
     monster: MonsterAi;
+    scareMesh: THREE.Group;
     flashlight: THREE.SpotLight;
     traces: THREE.Object3D[];
     colliders: THREE.Box3[];
+    outsideColliders: THREE.Box3[];
     trashObjects: THREE.Object3D[];
     stockObjects: THREE.Object3D[];
     carts: THREE.Object3D[];
@@ -514,6 +550,7 @@ export default function App() {
     autoDoorLeft: THREE.Object3D;
     autoDoorRight: THREE.Object3D;
     helpExit: THREE.Object3D;
+    dumpster: THREE.Object3D;
     outsideObjects: THREE.Object3D[];
     outsideLights: THREE.PointLight[];
     audio?: AudioContext;
@@ -534,6 +571,7 @@ export default function App() {
     heldItem: null,
     inventory: 0,
     outsideFinal: false,
+    trashDelivered: 0,
     health: 100,
     tasks: initialTasks,
   });
@@ -554,6 +592,19 @@ export default function App() {
   const scare = (name: string) => {
     const screamerImage = name ? 'screamer-grin' : 'screamer-grin';
     patchHud({ screamer: screamerImage, fear: clamp(hudRef.current.fear + 24, 0, 100) });
+    const state = engine.current!;
+    if (state) {
+      const forward = new THREE.Vector3();
+      state.camera.getWorldDirection(forward);
+      state.scareMesh.visible = true;
+      state.scareMesh.position.copy(state.camera.position).add(forward.multiplyScalar(1.05));
+      state.scareMesh.position.y -= 0.1;
+      state.scareMesh.lookAt(state.camera.position);
+      state.scareMesh.scale.setScalar(0.9 + Math.random() * 0.25);
+      window.setTimeout(() => {
+        if (engine.current) engine.current.scareMesh.visible = false;
+      }, 820);
+    }
     const ctx = engine.current?.audio;
     if (ctx) {
       const osc = ctx.createOscillator();
@@ -744,14 +795,14 @@ export default function App() {
     scene.add(stockRoomFloor, stockRoomSign, ...stockRoomCrates);
     stockRoomCrates.forEach((crate) => colliders.push(new THREE.Box3().setFromObject(crate)));
 
-    const securityRoomFloor = box(6.5, 0.04, 5.5, 0x252a2d, [12, 0.025, 12]);
-    const monitorWall = box(4.8, 1.7, 0.16, 0x101417, [12, 1.8, 16.65]);
+    const securityRoomFloor = box(6.5, 0.04, 5.5, 0x3a3f42, [12, 0.025, 12]);
+    const monitorWall = box(5.6, 1.9, 0.16, 0x20282d, [12, 1.9, 16.65]);
     scene.add(securityRoomFloor, monitorWall);
     const securityWalls = [
-      box(6.5, 2.7, 0.16, 0x30363a, [12, 1.35, 9.25]),
-      box(0.16, 2.7, 5.5, 0x30363a, [8.75, 1.35, 12]),
-      box(0.16, 2.7, 2.1, 0x30363a, [15.25, 1.35, 9.95]),
-      box(0.16, 2.7, 1.8, 0x30363a, [15.25, 1.35, 14.75]),
+      box(6.5, 2.7, 0.16, 0x555d61, [12, 1.35, 9.25]),
+      box(0.16, 2.7, 5.5, 0x555d61, [8.75, 1.35, 12]),
+      box(0.16, 2.7, 2.1, 0x555d61, [15.25, 1.35, 9.95]),
+      box(0.16, 2.7, 1.8, 0x555d61, [15.25, 1.35, 14.75]),
     ];
     securityWalls.forEach((wall) => {
       scene.add(wall);
@@ -759,12 +810,21 @@ export default function App() {
     });
     const securityDoorFrame = box(0.18, 2.3, 0.16, 0x81898f, [15.25, 1.15, 12.2]);
     scene.add(securityDoorFrame);
-    [-1.6, 0, 1.6].forEach((_, index) => {
-      const monitor = box(1.25, 0.72, 0.08, 0x0b2430, [10.4 + index * 1.6, 1.9, 16.52]);
-      const glow = new THREE.PointLight(0x89dcff, 0.45, 2.3);
-      glow.position.set(10.4 + index * 1.6, 1.9, 16.1);
-      scene.add(monitor, glow);
+    const monitorNames = ['CHECKOUT', 'FRIDGES', 'PARKING', 'DUMPSTER'];
+    monitorNames.forEach((name, index) => {
+      const x = 9.9 + (index % 2) * 3.0;
+      const y = 2.25 - Math.floor(index / 2) * 0.85;
+      const monitor = box(2.55, 0.72, 0.08, 0x082330, [x, y, 16.52]);
+      monitor.userData.cameraName = name;
+      const scan = box(2.35, 0.035, 0.03, 0xb8f3ff, [x, y + 0.18, 16.46]);
+      const glow = new THREE.PointLight(0x89dcff, 0.55, 2.6);
+      glow.position.set(x, y, 16.08);
+      const indicator = box(0.12, 0.12, 0.04, index === 3 ? 0xe02733 : 0x9cecff, [x - 1.12, y + 0.24, 16.44]);
+      scene.add(monitor, scan, indicator, glow);
     });
+    const securityCeilingLight = new THREE.PointLight(0xd8f0ff, 1.35, 7);
+    securityCeilingLight.position.set(12, 3.15, 12);
+    scene.add(securityCeilingLight);
 
     const stockObjects: THREE.Object3D[] = [];
     const shelfPositions = [-11, -6, -1, 4, 9, 14];
@@ -817,15 +877,19 @@ export default function App() {
     ];
 
     const trashObjects: THREE.Object3D[] = [
-      box(0.55, 0.38, 0.55, 0x090909, [-12, 0.2, 5]),
-      box(0.55, 0.38, 0.55, 0x090909, [6, 0.2, 4]),
-      box(0.55, 0.38, 0.55, 0x090909, [14, 0.2, -10]),
+      makeTrashBag([-12, 0, 5]),
+      makeTrashBag([6, 0, 4]),
+      makeTrashBag([14, 0, -10]),
     ];
     trashObjects.forEach((trash) => scene.add(trash));
 
     const monster = makeMonster();
     monster.position.set(5, -1.5, 38);
     scene.add(monster);
+    const scareMesh = makeMonster();
+    scareMesh.visible = false;
+    scareMesh.scale.setScalar(0.9);
+    scene.add(scareMesh);
 
     const traces: THREE.Object3D[] = [];
     for (let i = 0; i < 12; i += 1) {
@@ -865,12 +929,27 @@ export default function App() {
       scene.add(bandit.mesh);
     });
 
+    const outsideColliders: THREE.Box3[] = [];
     const outsideFloor = box(42, 0.12, 70, 0x171a1d, [0, -0.06, 42]);
     outsideFloor.visible = true;
     scene.add(outsideFloor);
     const dumpster = box(4.5, 2.2, 2.6, 0x214c3a, [5, 1.1, 38]);
     dumpster.visible = true;
     scene.add(dumpster);
+    outsideColliders.push(new THREE.Box3().setFromObject(dumpster));
+    const dumpsterLid = box(4.7, 0.18, 2.8, 0x17382b, [5, 2.28, 38]);
+    dumpsterLid.rotation.x = -0.18;
+    scene.add(dumpsterLid);
+    outsideColliders.push(new THREE.Box3().setFromObject(dumpsterLid));
+    const outsideTrash = [
+      makeTrashBag([2.2, 0, 39.4]),
+      makeTrashBag([7.6, 0, 36.9]),
+      makeTrashBag([5.9, 0, 41.1]),
+    ];
+    outsideTrash.forEach((bag) => {
+      bag.visible = true;
+      scene.add(bag);
+    });
     const parkingLines: THREE.Object3D[] = [];
     for (let x = -15; x <= 15; x += 5) {
       const line = box(0.08, 0.018, 9, 0xd8d5c8, [x, 0.02, 30]);
@@ -890,7 +969,7 @@ export default function App() {
     lamp1.intensity = 0.35;
     lamp2.intensity = 0.28;
     scene.add(lamp1, lamp2);
-    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, ...parkingLines];
+    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, ...outsideTrash, ...parkingLines];
     const outsideLights = [lamp1, lamp2];
 
     const keys: Record<string, boolean> = {};
@@ -929,9 +1008,11 @@ export default function App() {
       keys,
       customers,
       monster: { mesh: monster, active: false, emerging: 0 },
+      scareMesh,
       flashlight,
       traces,
       colliders,
+      outsideColliders,
       trashObjects,
       stockObjects,
       carts,
@@ -944,13 +1025,14 @@ export default function App() {
       autoDoorLeft,
       autoDoorRight,
       helpExit,
+      dumpster,
       outsideObjects,
       outsideLights,
     };
 
     const animate = () => {
       requestAnimationFrame(animate);
-      const state = engine.current;
+      const state = engine.current!;
       if (!state) return;
       const delta = Math.min(0.04, state.clock.getDelta());
       const current = hudRef.current;
@@ -980,7 +1062,8 @@ export default function App() {
           state.camera.position.z = clamp(state.camera.position.z, 17, 58);
         }
         const playerBox = new THREE.Box3().setFromCenterAndSize(state.camera.position, new THREE.Vector3(0.65, 1.7, 0.65));
-        if (state.colliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
+        const activeColliders = current.phase === 'outside' ? state.outsideColliders : state.colliders;
+        if (activeColliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
       }
 
       state.flashlight.position.copy(state.camera.position);
@@ -1039,8 +1122,9 @@ export default function App() {
         state.outsideObjects.forEach((object) => { object.visible = true; });
         state.outsideLights.forEach((light) => { light.intensity = finalReady ? 1.55 : 0.86; });
         state.scene.fog = new THREE.FogExp2(0x090b10, 0.052);
-        state.camera.position.set(0, 1.7, 22);
-        state.monster.mesh.visible = true;
+        state.camera.position.set(0, 1.7, 24);
+        state.monster.mesh.visible = false;
+        state.monster.active = false;
         state.monster.mesh.position.set(5, -1.5, 38);
         state.monster.emerging = 0;
         state.traces.forEach((trace) => { trace.visible = true; });
@@ -1051,7 +1135,6 @@ export default function App() {
             ? 'Ты вышел на парковку с мусором. Контейнер сдвинулся сам.'
             : 'Автоматические двери раскрылись. Ты вышел на пустую парковку, хотя смена еще не закончена.',
         });
-        if (finalReady) scare('screamer-trash3d');
       }
 
       state.customers.forEach((customer) => {
@@ -1104,7 +1187,7 @@ export default function App() {
             new THREE.Vector3(pos.x, 0.9, pos.z),
             new THREE.Vector3(0.58, 1.8, 0.58),
           );
-          if (state.colliders.some((collider) => collider.intersectsBox(customerBox))) {
+          if (customer.stage !== 'leave' && state.colliders.some((collider) => collider.intersectsBox(customerBox))) {
             pos.copy(oldCustomerPos);
             customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
           }
@@ -1172,6 +1255,56 @@ export default function App() {
       if (current.tasks.cameras && current.served >= 3 && livingBandits === 0 && !current.tasks.bandits) completeTask('bandits');
 
       if (current.phase === 'outside') {
+        if (state.camera.position.z < 18.5) {
+          state.camera.position.set(16.25, 1.7, 12);
+          state.scene.fog = new THREE.FogExp2(0x050607, 0.026);
+          state.monster.mesh.visible = false;
+          state.monster.active = false;
+          state.monster.emerging = 0;
+          patchHud({
+            phase: current.outsideFinal ? 'escaped' : 'shift',
+            outsideFinal: false,
+            message: current.outsideFinal
+              ? 'You slammed back into the store. The glass doors closed before the monster reached you.'
+              : 'You returned to the store through the automatic doors.',
+          });
+        } else {
+          const closeToDumpster = state.camera.position.distanceTo(state.dumpster.position) < 6.2;
+          if (!current.outsideFinal && closeToDumpster) {
+            state.monster.mesh.visible = true;
+            state.monster.active = true;
+            state.monster.mesh.position.set(5, -1.5, 38);
+            state.monster.emerging = 0;
+            patchHud({
+              outsideFinal: true,
+              fear: clamp(current.fear + 18, 0, 100),
+              message: 'The dumpster lid moves by itself. Run back to the store.',
+            });
+            scare('screamer-trash3d');
+          }
+          if (current.outsideFinal) {
+            state.monster.mesh.visible = true;
+            state.monster.active = true;
+            state.monster.emerging = clamp(state.monster.emerging + delta * 0.42, 0, 1);
+            state.monster.mesh.position.y = -1.5 + state.monster.emerging * 1.75;
+            state.monster.mesh.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
+            const toPlayer = state.camera.position.clone().sub(state.monster.mesh.position);
+            toPlayer.y = 0;
+            if (state.monster.emerging >= 0.7 && toPlayer.length() > 1.8) {
+              state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * 3.35));
+            }
+            if (state.monster.mesh.position.distanceTo(state.camera.position) < 2.5) {
+              patchHud({ phase: 'dead', message: 'The monster caught you near the dumpsters.' });
+              scare('screamer-trash3d');
+            }
+          } else {
+            state.monster.mesh.visible = false;
+            state.monster.active = false;
+          }
+        }
+      }
+
+      if (false && current.phase === 'outside' && state) {
         state.monster.mesh.visible = true;
         state.monster.active = true;
         const emergeSpeed = current.outsideFinal ? 0.28 : 0.08;
@@ -1245,7 +1378,7 @@ export default function App() {
   }, []);
 
   const startAudio = () => {
-    const state = engine.current;
+    const state = engine.current!;
     if (!state || state.audio) return;
     const ctx = new AudioContext();
     const hum = ctx.createOscillator();
@@ -1277,6 +1410,7 @@ export default function App() {
       heldItem: null,
       inventory: 0,
       outsideFinal: false,
+      trashDelivered: 0,
     });
     state.camera.position.set(0, 1.7, 14);
     state.stockObjects.forEach((item) => { item.visible = Boolean(item.userData.initialVisible); });
@@ -1307,7 +1441,7 @@ export default function App() {
   };
 
   const interact = () => {
-    const state = engine.current;
+    const state = engine.current!;
     if (!state) return;
     const current = hudRef.current;
     const pos = state.camera.position;
@@ -1318,7 +1452,7 @@ export default function App() {
       return;
     }
 
-    if (current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
+    if (false && state && current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
       state.camera.position.set(16.3, 1.7, 12);
       state.outsideObjects.forEach((object) => { object.visible = true; });
       state.outsideLights.forEach((light) => { light.intensity = 0.35; });
@@ -1425,11 +1559,35 @@ export default function App() {
       if (stocked >= 18) completeTask('stock');
       return;
     }
+    if (current.phase === 'outside' && current.heldItem === 'Trash bag' && near(state.dumpster, 5.5)) {
+      const delivered = current.trashDelivered + 1;
+      patchHud({
+        heldItem: null,
+        trashDelivered: delivered,
+        outsideFinal: true,
+        fear: clamp(current.fear + 22, 0, 100),
+        message: 'The trash bag drops into the dumpster. Something inside pushes back. Run to the store.',
+      });
+      state.monster.mesh.visible = true;
+      state.monster.active = true;
+      state.monster.mesh.position.set(5, -1.5, 38);
+      state.monster.emerging = 0;
+      scare('screamer-trash3d');
+      return;
+    }
+
     const trash = state.trashObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.2);
     if (trash) {
+      if (current.heldItem) {
+        patchHud({ message: 'Your hands are full. Take the current item outside or put it into a cart first.' });
+        return;
+      }
       trash.visible = false;
       const count = current.trash + 1;
+      patchHud({ trash: count, heldItem: 'Trash bag', message: 'You picked up a heavy trash bag. Carry it outside to the dumpster.' });
       patchHud({ trash: count, message: 'Мусор собран. Пакет будто тяжелее, чем должен быть.' });
+      patchHud({ trash: count, heldItem: 'Trash bag', message: 'You picked up a heavy trash bag. Carry it outside to the dumpster.' });
+      if (count === 1) scare('screamer-dust');
       if (count >= state.trashObjects.length) completeTask('trash');
       return;
     }
@@ -1452,8 +1610,9 @@ export default function App() {
       state.outsideObjects.forEach((object) => { object.visible = true; });
       state.outsideLights.forEach((light) => { light.intensity = finalReady ? 1.45 : 0.82; });
       state.scene.fog = new THREE.FogExp2(0x090b10, 0.052);
-      state.camera.position.set(0, 1.7, 22);
-      state.monster.mesh.visible = true;
+      state.camera.position.set(0, 1.7, 24);
+      state.monster.mesh.visible = false;
+      state.monster.active = false;
       state.monster.mesh.position.set(5, -1.5, 38);
       state.monster.emerging = 0;
       state.traces.forEach((trace) => { trace.visible = true; });
@@ -1464,7 +1623,6 @@ export default function App() {
           ? 'Финальная сцена: ночь, туман, фонари. Монстр вылезает из мусорки.'
           : 'Ты вышел на улицу раньше времени. Парковка пустая, но у контейнеров слышно мокрое дыхание.',
       });
-      if (finalReady) scare('screamer-trash3d');
       return;
     }
     patchHud({ message: 'Подойди ближе: телефон, касса, полки, мусор, камеры или выход.' });
@@ -1525,7 +1683,7 @@ export default function App() {
       )}
 
       {hud.screamer && (
-        <div className="screamer3d" style={{ backgroundImage: `url(/assets/${hud.screamer}.png)` }} />
+        <div className="screamer3d" style={{ backgroundImage: `url(${assetUrl(hud.screamer)})` }} />
       )}
     </main>
   );
