@@ -1556,6 +1556,7 @@ export default function App() {
         heldItem: null,
         message: `Полка пополнена: ${hiddenProduct.userData.product}.`,
       });
+      if (stocked === 2 || stocked === 7 || stocked === 13) scare('screamer-grin');
       if (stocked >= 18) completeTask('stock');
       return;
     }
