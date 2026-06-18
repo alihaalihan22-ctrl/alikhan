@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "installCommand": "echo \"Static deploy: no install needed\"",
+  "buildCommand": "echo \"Static deploy: build already exists\"",
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
