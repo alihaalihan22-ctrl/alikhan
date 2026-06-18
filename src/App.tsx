@@ -1,41 +1,1532 @@
-import { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from './lib/supabase';
-import { Auth } from './components/Auth';
-import { Entries } from './components/Entries';
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+type Phase = 'menu' | 'shift' | 'armed' | 'outside' | 'escaped' | 'dead';
+type TaskKey = 'phone' | 'cashier' | 'stock' | 'trash' | 'cameras' | 'bandits' | 'outside';
+
+type Hud = {
+  phase: Phase;
+  locked: boolean;
+  message: string;
+  battery: number;
+  fear: number;
+  health: number;
+  served: number;
+  stocked: number;
+  trash: number;
+  cameraOpen: boolean;
+  screamer: string | null;
+  heldItem: string | null;
+  inventory: number;
+  outsideFinal: boolean;
+  tasks: Record<TaskKey, boolean>;
+};
+
+type CustomerAi = {
+  mesh: THREE.Group;
+  stage: 'waiting' | 'browse' | 'checkout' | 'leave' | 'gone' | 'weird';
+  target: THREE.Vector3;
+  item: string;
+  weird: boolean;
+  leaveTime: number;
+  checkoutTime: number;
+  angry: boolean;
+  spawnAt: number;
+};
+
+type MonsterAi = {
+  mesh: THREE.Group;
+  active: boolean;
+  emerging: number;
+};
+
+type BanditAi = {
+  mesh: THREE.Group;
+  active: boolean;
+  health: number;
+  target: THREE.Vector3;
+};
+
+type FridgeUnit = {
+  mesh: THREE.Group;
+  door: THREE.Object3D;
+  manualOpen: boolean;
+};
+
+const productNames = ['Pepsi', 'Fanta', 'Вода', 'Чипсы', 'Бургер', 'Хот-дог', 'Корн-дог', 'Шоколадка', 'Печенье', 'Овощи', 'Фрукты', 'Мороженое'];
+const customerWaypoints = [
+  new THREE.Vector3(-15, 0, -13),
+  new THREE.Vector3(-12, 0, 8),
+  new THREE.Vector3(-7, 0, -13),
+  new THREE.Vector3(-3, 0, 9),
+  new THREE.Vector3(2, 0, -13),
+  new THREE.Vector3(7, 0, 8),
+  new THREE.Vector3(13, 0, -13),
+  new THREE.Vector3(14, 0, 6),
+];
+const initialTasks: Record<TaskKey, boolean> = {
+  phone: false,
+  cashier: false,
+  stock: false,
+  trash: false,
+  cameras: false,
+  bandits: false,
+  outside: false,
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function getInputKey(event: KeyboardEvent) {
+  const byCode: Record<string, string> = {
+    KeyW: 'w',
+    KeyA: 'a',
+    KeyS: 's',
+    KeyD: 'd',
+    ArrowUp: 'w',
+    ArrowLeft: 'a',
+    ArrowDown: 's',
+    ArrowRight: 'd',
+    KeyE: 'e',
+    KeyQ: 'q',
+    ShiftLeft: 'shift',
+    ShiftRight: 'shift',
+    Escape: 'escape',
+  };
+  const byKey: Record<string, string> = {
+    ц: 'w',
+    ф: 'a',
+    ы: 's',
+    в: 'd',
+    у: 'e',
+    й: 'q',
+  };
+  const raw = event.key.toLowerCase();
+  return byCode[event.code] ?? byKey[raw] ?? raw;
+}
+
+function box(w: number, h: number, d: number, color: number, pos: [number, number, number]) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.72 }),
+  );
+  mesh.position.set(...pos);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function cylinder(radius: number, height: number, color: number, pos: [number, number, number], segments = 20) {
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius, radius, height, segments),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.04 }),
+  );
+  mesh.position.set(...pos);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeProduct(name: string, color: number) {
+  const group = new THREE.Group();
+  if (name.includes('Pepsi') || name.includes('Fanta') || name.includes('Вода')) {
+    const bottle = cylinder(0.13, 0.62, color, [0, 0.31, 0], 24);
+    const cap = cylinder(0.1, 0.08, 0xeeeeee, [0, 0.66, 0], 18);
+    const label = box(0.29, 0.16, 0.02, 0xf4f4f4, [0, 0.36, -0.13]);
+    group.add(bottle, cap, label);
+  } else if (name.includes('Чип')) {
+    const bag = box(0.38, 0.72, 0.14, color, [0, 0.36, 0]);
+    bag.rotation.z = 0.08;
+    group.add(bag);
+  } else if (name.includes('Бургер')) {
+    group.add(cylinder(0.18, 0.13, 0xc9863b, [0, 0.33, 0], 24));
+    group.add(cylinder(0.17, 0.08, 0x5b2a16, [0, 0.23, 0], 24));
+    group.add(cylinder(0.18, 0.1, 0xe0a24c, [0, 0.14, 0], 24));
+  } else if (name.includes('дог')) {
+    const bun = box(0.52, 0.14, 0.18, 0xd69a53, [0, 0.22, 0]);
+    const sausage = box(0.48, 0.08, 0.09, 0xa93b24, [0, 0.31, 0]);
+    group.add(bun, sausage);
+  } else if (name.includes('Шоколад')) {
+    const bar = box(0.56, 0.1, 0.28, 0x4a2118, [0, 0.18, 0]);
+    const wrap = box(0.6, 0.12, 0.08, color, [0, 0.2, -0.08]);
+    group.add(bar, wrap);
+  } else if (name.includes('Печенье')) {
+    for (let i = 0; i < 4; i += 1) {
+      const cookie = cylinder(0.12, 0.045, 0xb98045, [-0.18 + i * 0.12, 0.16 + i * 0.025, 0], 18);
+      cookie.rotation.x = Math.PI / 2;
+      group.add(cookie);
+    }
+  } else if (name.includes('Овощ')) {
+    group.add(cylinder(0.16, 0.28, 0x49a644, [0, 0.18, 0], 14));
+    group.add(cylinder(0.11, 0.22, 0xdd4a35, [0.18, 0.16, 0.04], 14));
+  } else if (name.includes('Фрукт')) {
+    const apple = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 18, 14),
+      new THREE.MeshStandardMaterial({ color: 0xc23228, roughness: 0.42 }),
+    );
+    apple.position.set(-0.12, 0.18, 0);
+    const orange = new THREE.Mesh(
+      new THREE.SphereGeometry(0.15, 18, 14),
+      new THREE.MeshStandardMaterial({ color: 0xe38b26, roughness: 0.45 }),
+    );
+    orange.position.set(0.14, 0.18, 0.04);
+    group.add(apple, orange);
+  } else {
+    const pack = box(0.32, 0.42, 0.24, color, [0, 0.22, 0]);
+    group.add(pack);
+  }
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeHuman(color: number, skin = 0xf0aa77, dark = false) {
+  const group = new THREE.Group();
+  const shirt = new THREE.MeshStandardMaterial({ color, roughness: 0.68, metalness: 0.02 });
+  const pants = new THREE.MeshStandardMaterial({ color: 0x202226, roughness: 0.72 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.62 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.72, 8, 18), shirt);
+  body.position.y = 0.96;
+  body.scale.set(0.85, 1.08, 0.58);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 24, 18),
+    skinMat,
+  );
+  head.position.y = 1.55;
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.27, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: dark ? 0x050505 : 0x1b120d, roughness: 0.9 }),
+  );
+  hair.position.y = 1.65;
+  const eyeMat = new THREE.MeshBasicMaterial({ color: dark ? 0xffcf6c : 0x07110f });
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), eyeMat);
+  const eyeR = eyeL.clone();
+  eyeL.position.set(-0.08, 1.57, -0.22);
+  eyeR.position.set(0.08, 1.57, -0.22);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 8), skinMat);
+  nose.position.set(0, 1.51, -0.245);
+  nose.rotation.x = Math.PI / 2;
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 0.012), new THREE.MeshBasicMaterial({ color: 0x35130f }));
+  mouth.position.set(0, 1.43, -0.235);
+  const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.6, 6, 10), skinMat);
+  const armR = armL.clone();
+  armL.position.set(-0.38, 0.91, -0.02);
+  armR.position.set(0.38, 0.91, -0.02);
+  armL.rotation.z = -0.18;
+  armR.rotation.z = 0.18;
+  const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.62, 6, 10), pants);
+  const legR = legL.clone();
+  legL.position.set(-0.13, 0.31, 0);
+  legR.position.set(0.13, 0.31, 0);
+  const shoeL = box(0.18, 0.08, 0.28, 0x050505, [-0.13, 0.035, -0.04]);
+  const shoeR = box(0.18, 0.08, 0.28, 0x050505, [0.13, 0.035, -0.04]);
+  group.add(body, head, hair, eyeL, eyeR, nose, mouth, armL, armR, legL, legR, shoeL, shoeR);
+  return group;
+}
+
+function makeCustomer(color: number, index = 0) {
+  const group = makeHuman(color, [0xf0aa77, 0xd09165, 0xb87954, 0xe0b08a][index % 4], index % 3 === 0);
+  const bag = box(0.22, 0.32, 0.12, 0x6b4a2f, [0.46, 0.78, 0.06]);
+  bag.rotation.z = 0.16;
+  group.add(bag);
+  return group;
+}
+
+function makeBandit() {
+  const group = makeHuman(0x111111, 0xb98a68, true);
+  const weapon = box(0.12, 0.12, 0.72, 0x333333, [0.55, 0.9, -0.28]);
+  weapon.rotation.x = 0.55;
+  group.add(weapon);
+  return group;
+}
+
+function makeCart(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0xb8c1c7, metalness: 0.75, roughness: 0.22 });
+  const basket = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.62, 0.9), metal);
+  basket.position.y = 0.62;
+  basket.scale.set(1, 1, 1);
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.025, 8, 28), metal);
+  handle.position.set(0, 1.05, 0.52);
+  handle.rotation.x = Math.PI / 2;
+  group.add(basket, handle);
+  [-0.42, 0.42].forEach((x) => [-0.32, 0.32].forEach((z) => {
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 8, 18), metal);
+    wheel.position.set(x, 0.12, z);
+    wheel.rotation.y = Math.PI / 2;
+    group.add(wheel);
+  }));
+  group.position.set(...pos);
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  group.userData.kind = 'cart';
+  group.userData.items = 0;
+  return group;
+}
+
+function makeHandBasket(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const plastic = new THREE.MeshStandardMaterial({ color: 0xd82632, roughness: 0.42, metalness: 0.02 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.55 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.08, 0.62), plastic);
+  base.position.y = 0.16;
+  group.add(base);
+  [-0.34, 0, 0.34].forEach((x) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.38, 0.66), plastic);
+    rail.position.set(x, 0.4, 0);
+    group.add(rail);
+  });
+  [-0.28, 0, 0.28].forEach((z) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.32, 0.04), plastic);
+    rail.position.set(0, 0.42, z);
+    group.add(rail);
+  });
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.025, 8, 28), dark);
+  handle.position.set(0, 0.78, 0);
+  handle.rotation.x = Math.PI / 2;
+  group.add(handle);
+  group.position.set(...pos);
+  group.userData.kind = 'basket';
+  group.userData.items = 0;
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeParkedCar(pos: [number, number, number], color: number) {
+  const group = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.24, metalness: 0.28 });
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0x9fc7d9,
+    roughness: 0.05,
+    metalness: 0,
+    transmission: 0.35,
+    transparent: true,
+    opacity: 0.42,
+    clearcoat: 1,
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, 4.1), paint);
+  body.position.y = 0.45;
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.55, 1.7), glass);
+  cabin.position.set(0, 0.95, -0.25);
+  group.add(body, cabin);
+  [-0.82, 0.82].forEach((x) => [-1.45, 1.45].forEach((z) => {
+    const wheel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.28, 0.22, 18),
+      new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.62 }),
+    );
+    wheel.position.set(x, 0.23, z);
+    wheel.rotation.z = Math.PI / 2;
+    group.add(wheel);
+  }));
+  const headlightMat = new THREE.MeshBasicMaterial({ color: 0xffefb2 });
+  [-0.55, 0.55].forEach((x) => {
+    const light = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.06), headlightMat);
+    light.position.set(x, 0.56, -2.08);
+    group.add(light);
+  });
+  group.position.set(...pos);
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeFridge(pos: [number, number, number]): FridgeUnit {
+  const group = new THREE.Group();
+  const frame = box(2.3, 3.1, 0.45, 0x22272d, [0, 1.55, 0]);
+  const glass = new THREE.Mesh(
+    new THREE.BoxGeometry(1.85, 2.55, 0.05),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xaedcff,
+      metalness: 0,
+      roughness: 0.03,
+      transmission: 0.55,
+      transparent: true,
+      opacity: 0.34,
+      reflectivity: 0.9,
+      clearcoat: 1,
+    }),
+  );
+  glass.position.set(0, 1.58, -0.26);
+  glass.userData.closedZ = -0.26;
+  glass.userData.openZ = -0.9;
+  const glow = new THREE.PointLight(0xbdeeff, 0.75, 4);
+  glow.position.set(0, 1.8, -0.45);
+  group.add(frame, glass, glow);
+  for (let i = 0; i < 8; i += 1) {
+    const item = makeProduct(productNames[i % productNames.length], [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8f4ff][i % 4]);
+    item.position.set(-0.65 + (i % 4) * 0.43, 0.85 + Math.floor(i / 4) * 0.9, -0.36);
+    item.scale.setScalar(0.72);
+    group.add(item);
+  }
+  group.position.set(...pos);
+  return { mesh: group, door: glass, manualOpen: false };
+}
+
+function makeMetalShelf(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x9ba3a7, metalness: 0.86, roughness: 0.24 });
+  const darkMetal = new THREE.MeshStandardMaterial({ color: 0x4f575c, metalness: 0.9, roughness: 0.2 });
+
+  [-0.48, 0.48].forEach((x) => [-5.1, 5.1].forEach((z) => {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.35, 0.12), darkMetal);
+    post.position.set(x, 1.18, z);
+    group.add(post);
+  }));
+
+  [0.38, 0.95, 1.52, 2.08].forEach((y) => {
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(1.08, 0.09, 10.7), metal);
+    tray.position.set(0, y, 0);
+    group.add(tray);
+    [-0.58, 0.58].forEach((x) => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.18, 10.8), darkMetal);
+      rail.position.set(x, y + 0.1, 0);
+      group.add(rail);
+    });
+  });
+
+  [-4, -2, 0, 2, 4].forEach((z) => {
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.08, 0.08), darkMetal);
+    cross.position.set(0, 2.35, z);
+    group.add(cross);
+  });
+
+  group.position.set(...pos);
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeMonster() {
+  const group = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({
+    color: 0x4b171d,
+    emissive: 0x160006,
+    roughness: 0.42,
+    metalness: 0.04,
+  });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.75, 2.4, 10, 24), skin);
+  body.position.y = 1.9;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.68, 24, 18), skin);
+  head.position.y = 3.35;
+  head.scale.set(1, 0.8, 1.15);
+  group.add(body, head);
+  const mouth = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 20, 12),
+    new THREE.MeshStandardMaterial({ color: 0x050000, roughness: 0.95, emissive: 0x210004 }),
+  );
+  mouth.position.set(0, 3.16, -0.61);
+  mouth.scale.set(1.45, 0.42, 0.34);
+  group.add(mouth);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffe083 });
+  [-0.23, 0.23].forEach((x) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), eyeMat);
+    eye.position.set(x, 3.42, -0.56);
+    group.add(eye);
+  });
+  for (let i = 0; i < 15; i += 1) {
+    const tooth = new THREE.Mesh(
+      new THREE.ConeGeometry(0.055, 0.44, 10),
+      new THREE.MeshStandardMaterial({ color: 0xe9dfc8, roughness: 0.34 }),
+    );
+    tooth.position.set(-0.47 + i * 0.067, 3.03 + (i % 2) * 0.23, -0.72);
+    tooth.rotation.x = i % 2 ? 0 : Math.PI;
+    group.add(tooth);
+  }
+  [-1, 1].forEach((side) => {
+    const horn = new THREE.Mesh(
+      new THREE.ConeGeometry(0.16, 0.95, 16),
+      new THREE.MeshStandardMaterial({ color: 0xc9bba0, roughness: 0.28 }),
+    );
+    horn.position.set(side * 0.45, 3.92, -0.05);
+    horn.rotation.z = -side * 0.48;
+    group.add(horn);
+  });
+  for (let i = 0; i < 8; i += 1) {
+    const spine = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.55, 10), skin);
+    spine.position.set(0, 3.05 - i * 0.28, 0.72);
+    spine.rotation.x = Math.PI / 2;
+    group.add(spine);
+  }
+  [-1, 1].forEach((side) => {
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 1.8, 6, 10), skin);
+    arm.position.set(side * 0.95, 2.1, -0.05);
+    arm.rotation.z = side * 0.7;
+    group.add(arm);
+    const claw = new THREE.Mesh(
+      new THREE.ConeGeometry(0.18, 0.55, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd8cfb9, roughness: 0.2 }),
+    );
+    claw.position.set(side * 1.55, 1.35, -0.12);
+    claw.rotation.z = -side * 0.8;
+    group.add(claw);
+  });
+  const glow = new THREE.PointLight(0xff273f, 2.2, 8);
+  glow.position.set(0, 2.8, 0);
+  group.add(glow);
+  group.visible = false;
+  return group;
+}
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const engine = useRef<{
+    renderer: THREE.WebGLRenderer;
+    scene: THREE.Scene;
+    camera: THREE.PerspectiveCamera;
+    controls: PointerLockControls;
+    clock: THREE.Clock;
+    keys: Record<string, boolean>;
+    customers: CustomerAi[];
+    monster: MonsterAi;
+    flashlight: THREE.SpotLight;
+    traces: THREE.Object3D[];
+    colliders: THREE.Box3[];
+    trashObjects: THREE.Object3D[];
+    stockObjects: THREE.Object3D[];
+    carts: THREE.Object3D[];
+    fridges: FridgeUnit[];
+    loreNotes: THREE.Object3D[];
+    bandits: BanditAi[];
+    phone: THREE.Object3D;
+    cameraDesk: THREE.Object3D;
+    exitDoor: THREE.Object3D;
+    autoDoorLeft: THREE.Object3D;
+    autoDoorRight: THREE.Object3D;
+    helpExit: THREE.Object3D;
+    outsideObjects: THREE.Object3D[];
+    outsideLights: THREE.PointLight[];
+    audio?: AudioContext;
+    wind?: OscillatorNode;
+  } | null>(null);
+
+  const [hud, setHud] = useState<Hud>({
+    phase: 'menu',
+    locked: false,
+    message: 'Шестёрочка Horror: нажми старт, затем кликни по игре для захвата мыши.',
+    battery: 100,
+    fear: 0,
+    served: 0,
+    stocked: 0,
+    trash: 0,
+    cameraOpen: false,
+    screamer: null,
+    heldItem: null,
+    inventory: 0,
+    outsideFinal: false,
+    health: 100,
+    tasks: initialTasks,
+  });
+  const hudRef = useRef(hud);
 
   useEffect(() => {
-    // 1) текущая сессия при загрузке
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
+    hudRef.current = hud;
+  }, [hud]);
+
+  const patchHud = (patch: Partial<Hud>) => {
+    setHud((current) => ({ ...current, ...patch }));
+  };
+
+  const completeTask = (task: TaskKey) => {
+    setHud((current) => ({ ...current, tasks: { ...current.tasks, [task]: true } }));
+  };
+
+  const scare = (name: string) => {
+    const screamerImage = name ? 'screamer-grin' : 'screamer-grin';
+    patchHud({ screamer: screamerImage, fear: clamp(hudRef.current.fear + 24, 0, 100) });
+    const ctx = engine.current?.audio;
+    if (ctx) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 48 + Math.random() * 42;
+      gain.gain.value = 0.18;
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.7);
+    }
+    window.setTimeout(() => patchHud({ screamer: null }), 950);
+  };
+
+  const angrySound = () => {
+    const ctx = engine.current?.audio;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const growl = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    growl.type = 'sawtooth';
+    osc.frequency.setValueAtTime(210, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(68, ctx.currentTime + 0.45);
+    growl.frequency.setValueAtTime(42, ctx.currentTime);
+    gain.gain.value = 0.001;
+    gain.gain.exponentialRampToValueAtTime(0.13, ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.75);
+    osc.connect(gain);
+    growl.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    growl.start();
+    osc.stop(ctx.currentTime + 0.75);
+    growl.stop(ctx.currentTime + 0.75);
+  };
+
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x050607);
+    scene.fog = new THREE.FogExp2(0x050607, 0.026);
+
+    const camera = new THREE.PerspectiveCamera(75, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 220);
+    camera.position.set(0, 1.7, 14);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    mountRef.current.appendChild(renderer.domElement);
+
+    const controls = new PointerLockControls(camera, renderer.domElement);
+    controls.addEventListener('lock', () => patchHud({ locked: true }));
+    controls.addEventListener('unlock', () => patchHud({ locked: false }));
+
+    const hemi = new THREE.HemisphereLight(0xf2f6ff, 0x242424, 0.95);
+    scene.add(hemi);
+    const storeLight = new THREE.PointLight(0xfff6d8, 4.2, 58);
+    storeLight.position.set(0, 6, 0);
+    storeLight.castShadow = true;
+    storeLight.shadow.mapSize.set(1024, 1024);
+    scene.add(storeLight);
+    [-12, -6, 0, 6, 12].forEach((x) => {
+      [-11, -3, 5, 12].forEach((z) => {
+        const strip = new THREE.RectAreaLight(0xf7fbff, 4.2, 5.6, 0.62);
+        strip.position.set(x, 3.85, z);
+        strip.rotation.x = -Math.PI / 2;
+        scene.add(strip);
+        const panel = new THREE.Mesh(
+          new THREE.BoxGeometry(5.4, 0.05, 0.55),
+          new THREE.MeshStandardMaterial({
+            color: 0xf2f7ff,
+            emissive: 0xe9f3ff,
+            emissiveIntensity: 2.8,
+            roughness: 0.18,
+          }),
+        );
+        panel.position.set(x, 3.82, z);
+        panel.receiveShadow = false;
+        scene.add(panel);
+      });
     });
-    // 2) подписка на вход/выход
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
+
+    const flashlight = new THREE.SpotLight(0xffffff, 3.2, 20, Math.PI / 8, 0.35, 1.1);
+    flashlight.position.copy(camera.position);
+    flashlight.target.position.set(0, 1.7, 0);
+    scene.add(flashlight, flashlight.target);
+
+    const floor = new THREE.Mesh(
+      new THREE.BoxGeometry(36, 0.16, 34),
+      new THREE.MeshStandardMaterial({ color: 0x5f5b54, roughness: 0.18, metalness: 0.06 }),
+    );
+    floor.position.set(0, -0.08, 0);
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const groutMat = new THREE.MeshStandardMaterial({ color: 0x2a2927, roughness: 0.7 });
+    for (let x = -17; x <= 17; x += 2) {
+      const line = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.01, 33), groutMat);
+      line.position.set(x, 0.006, 0);
+      scene.add(line);
+    }
+    for (let z = -16; z <= 16; z += 2) {
+      const line = new THREE.Mesh(new THREE.BoxGeometry(35, 0.01, 0.025), groutMat);
+      line.position.set(0, 0.007, z);
+      scene.add(line);
+    }
+    const colliders: THREE.Box3[] = [];
+    const addWall = (mesh: THREE.Mesh) => {
+      scene.add(mesh);
+      colliders.push(new THREE.Box3().setFromObject(mesh));
+    };
+    addWall(box(36, 4, 0.3, 0x3e4448, [0, 2, -17]));
+    addWall(box(36, 4, 0.3, 0x3e4448, [0, 2, 17]));
+    addWall(box(0.3, 4, 34, 0x3e4448, [-18, 2, 0]));
+    addWall(box(0.3, 4, 24, 0x3e4448, [18, 2, -5]));
+
+    const glassDoorMat = new THREE.MeshPhysicalMaterial({
+      color: 0xb8e7ff,
+      roughness: 0.02,
+      metalness: 0,
+      transmission: 0.65,
+      transparent: true,
+      opacity: 0.36,
+      clearcoat: 1,
+      reflectivity: 1,
     });
-    return () => sub.subscription.unsubscribe();
+    const exitDoor = box(3.2, 3.2, 0.15, 0x111820, [18.05, 1.6, 12]);
+    exitDoor.visible = false;
+    scene.add(exitDoor);
+    const autoDoorLeft = new THREE.Mesh(new THREE.BoxGeometry(1.35, 2.75, 0.08), glassDoorMat);
+    autoDoorLeft.position.set(18.02, 1.42, 11.25);
+    autoDoorLeft.rotation.y = Math.PI / 2;
+    autoDoorLeft.castShadow = true;
+    const autoDoorRight = autoDoorLeft.clone();
+    autoDoorRight.position.z = 12.75;
+    scene.add(autoDoorLeft, autoDoorRight);
+    const doorFrameTop = box(0.18, 0.18, 3.55, 0x9aa8ad, [18.03, 2.95, 12]);
+    const doorFrameBottom = box(0.14, 0.12, 3.55, 0x535f64, [18.03, 0.08, 12]);
+    scene.add(doorFrameTop, doorFrameBottom);
+    const helpExit = box(3.6, 3.3, 0.3, 0x2f6f47, [0, 1.65, 48]);
+    helpExit.visible = false;
+    scene.add(helpExit);
+
+    const phone = box(0.8, 0.35, 0.65, 0x111111, [-14, 1.1, 12]);
+    scene.add(phone);
+
+    const counter = box(5, 1.05, 1.4, 0x8d1c24, [-3, 0.52, 12]);
+    scene.add(counter);
+    colliders.push(new THREE.Box3().setFromObject(counter));
+    const registerScreen = box(0.55, 0.38, 0.08, 0x111820, [-4.15, 1.28, 11.55]);
+    const scanner = box(0.5, 0.1, 0.34, 0x101010, [-3.15, 1.1, 11.55]);
+    const cardTerminal = box(0.22, 0.12, 0.32, 0x1d252b, [-2.25, 1.15, 11.55]);
+    scene.add(registerScreen, scanner, cardTerminal);
+    const cigaretteRack = new THREE.Group();
+    const rackMat = new THREE.MeshStandardMaterial({ color: 0x23272b, metalness: 0.55, roughness: 0.28 });
+    const rackBack = new THREE.Mesh(new THREE.BoxGeometry(3.7, 1.25, 0.08), rackMat);
+    rackBack.position.set(-3, 2.08, 12.78);
+    cigaretteRack.add(rackBack);
+    for (let row = 0; row < 3; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const pack = box(0.28, 0.38, 0.05, [0xf3f0e6, 0xb51d2a, 0x1f3f72, 0x2f2f2f][(row + col) % 4], [-4.45 + col * 0.42, 1.67 + row * 0.36, 12.72]);
+        cigaretteRack.add(pack);
+      }
+      const shelfLip = new THREE.Mesh(new THREE.BoxGeometry(3.65, 0.04, 0.08), rackMat);
+      shelfLip.position.set(-3, 1.48 + row * 0.36, 12.67);
+      cigaretteRack.add(shelfLip);
+    }
+    scene.add(cigaretteRack);
+
+    const cameraDesk = box(1.5, 1, 1.1, 0x1b1f25, [11.5, 0.5, 12.5]);
+    scene.add(cameraDesk);
+
+    const stockRoomFloor = box(8, 0.04, 8, 0x47433d, [-14, 0.02, -2]);
+    const stockRoomSign = box(2.2, 0.45, 0.08, 0x1e2428, [-17.82, 2.35, -2]);
+    const stockRoomCrates = [
+      box(1.2, 1.0, 1.2, 0x8a5a2b, [-15.5, 0.5, -4.6]),
+      box(1.2, 1.0, 1.2, 0x8a5a2b, [-13.9, 0.5, -4.6]),
+      box(1.2, 1.0, 1.2, 0x8a5a2b, [-12.3, 0.5, -4.6]),
+    ];
+    scene.add(stockRoomFloor, stockRoomSign, ...stockRoomCrates);
+    stockRoomCrates.forEach((crate) => colliders.push(new THREE.Box3().setFromObject(crate)));
+
+    const securityRoomFloor = box(6.5, 0.04, 5.5, 0x252a2d, [12, 0.025, 12]);
+    const monitorWall = box(4.8, 1.7, 0.16, 0x101417, [12, 1.8, 16.65]);
+    scene.add(securityRoomFloor, monitorWall);
+    const securityWalls = [
+      box(6.5, 2.7, 0.16, 0x30363a, [12, 1.35, 9.25]),
+      box(0.16, 2.7, 5.5, 0x30363a, [8.75, 1.35, 12]),
+      box(0.16, 2.7, 2.1, 0x30363a, [15.25, 1.35, 9.95]),
+      box(0.16, 2.7, 1.8, 0x30363a, [15.25, 1.35, 14.75]),
+    ];
+    securityWalls.forEach((wall) => {
+      scene.add(wall);
+      colliders.push(new THREE.Box3().setFromObject(wall));
+    });
+    const securityDoorFrame = box(0.18, 2.3, 0.16, 0x81898f, [15.25, 1.15, 12.2]);
+    scene.add(securityDoorFrame);
+    [-1.6, 0, 1.6].forEach((_, index) => {
+      const monitor = box(1.25, 0.72, 0.08, 0x0b2430, [10.4 + index * 1.6, 1.9, 16.52]);
+      const glow = new THREE.PointLight(0x89dcff, 0.45, 2.3);
+      glow.position.set(10.4 + index * 1.6, 1.9, 16.1);
+      scene.add(monitor, glow);
+    });
+
+    const stockObjects: THREE.Object3D[] = [];
+    const shelfPositions = [-11, -6, -1, 4, 9, 14];
+    shelfPositions.forEach((x, shelfIndex) => {
+      const shelf = makeMetalShelf([x, 0, -3]);
+      scene.add(shelf);
+      colliders.push(new THREE.Box3().setFromObject(shelf));
+      for (let i = 0; i < 7; i += 1) {
+        const productColor = [0x1b4fff, 0xff7d19, 0x85d9ff, 0xf0d23c, 0x8d4b22, 0xe7422f, 0xf4f2d7, 0x48a64b, 0xd8f4ff][(i + shelfIndex) % productNames.length];
+        const product = makeProduct(productNames[(i + shelfIndex) % productNames.length], productColor);
+        product.position.set(x, 0.42 + (i % 3) * 0.62, -7 + Math.floor(i / 3) * 2.1);
+        product.scale.setScalar(0.82);
+        product.visible = shelfIndex < 2;
+        product.userData.initialVisible = product.visible;
+        product.userData.product = productNames[(i + shelfIndex) % productNames.length];
+        scene.add(product);
+        stockObjects.push(product);
+      }
+    });
+
+    const fridges = [makeFridge([-14.8, 0, -12.5]), makeFridge([-12.1, 0, -12.5]), makeFridge([-9.4, 0, -12.5])];
+    fridges.forEach((fridge) => {
+      scene.add(fridge.mesh);
+      colliders.push(new THREE.Box3().setFromObject(fridge.mesh));
+    });
+
+    const carts = [
+      makeCart([8, 0, 9]),
+      makeCart([13, 0, 7]),
+      makeCart([-12, 0, 9]),
+      makeHandBasket([-4.2, 0, 13.1]),
+      makeHandBasket([-3.4, 0, 13.1]),
+      makeHandBasket([-2.6, 0, 13.1]),
+    ];
+    carts.forEach((cart) => {
+      scene.add(cart);
+    });
+
+    const makeLoreNote = (pos: [number, number, number], lore: string) => {
+      const note = box(0.7, 0.04, 0.46, 0xe0d2ad, pos);
+      note.rotation.y = Math.random() * 0.3 - 0.15;
+      note.userData.lore = lore;
+      scene.add(note);
+      return note;
+    };
+    const loreNotes = [
+      makeLoreNote([11.3, 1.05, 12.8], 'Запись охраны: камера у мусорки отключалась ровно в 05:12 три ночи подряд. После помех клиенты забывали, зачем пришли.'),
+      makeLoreNote([-15.3, 1.05, -4.6], 'Накладная склада: поставка с маркировкой Ш-6 пришла без водителя. Внутри коробок слышали дыхание.'),
+      makeLoreNote([5.7, 0.45, 38.8], 'Старая записка: не стой у контейнеров дольше минуты. Он сначала копирует шаги, потом голос.'),
+    ];
+
+    const trashObjects: THREE.Object3D[] = [
+      box(0.55, 0.38, 0.55, 0x090909, [-12, 0.2, 5]),
+      box(0.55, 0.38, 0.55, 0x090909, [6, 0.2, 4]),
+      box(0.55, 0.38, 0.55, 0x090909, [14, 0.2, -10]),
+    ];
+    trashObjects.forEach((trash) => scene.add(trash));
+
+    const monster = makeMonster();
+    monster.position.set(5, -1.5, 38);
+    scene.add(monster);
+
+    const traces: THREE.Object3D[] = [];
+    for (let i = 0; i < 12; i += 1) {
+      const trace = box(0.55, 0.018, 0.18, 0x3b100b, [8 + Math.random() * 8, 0.01, 13 + Math.random() * 4]);
+      trace.rotation.y = Math.random() * Math.PI;
+      trace.visible = false;
+      scene.add(trace);
+      traces.push(trace);
+    }
+
+    const customers: CustomerAi[] = ['Аружан', 'Марат', 'Старик', 'Клиент 05:12', 'Охранник'].map((_name, index) => {
+      const customerMesh = makeCustomer([0x2d79c7, 0x9234a8, 0x59733c, 0x111111, 0x6b1f28][index], index);
+      customerMesh.position.set(-15 + index * 2.4, 0, -12);
+      customerMesh.visible = false;
+      customerMesh.userData.initialPosition = customerMesh.position.clone();
+      scene.add(customerMesh);
+      return {
+        mesh: customerMesh,
+        stage: 'waiting',
+        target: new THREE.Vector3(-10 + index * 4, 0, -5 + (index % 2) * 8),
+        item: productNames[index % productNames.length],
+        weird: index >= 3,
+        leaveTime: 0,
+        checkoutTime: 0,
+        angry: false,
+        spawnAt: 2 + index * 5,
+      };
+    });
+
+    const bandits: BanditAi[] = [
+      { mesh: makeBandit(), active: false, health: 3, target: new THREE.Vector3(12, 0, -10) },
+      { mesh: makeBandit(), active: false, health: 3, target: new THREE.Vector3(-13, 0, 4) },
+    ];
+    bandits.forEach((bandit, index) => {
+      bandit.mesh.position.set(index === 0 ? 14 : -15, 0, -13);
+      bandit.mesh.visible = false;
+      scene.add(bandit.mesh);
+    });
+
+    const outsideFloor = box(42, 0.12, 70, 0x171a1d, [0, -0.06, 42]);
+    outsideFloor.visible = true;
+    scene.add(outsideFloor);
+    const dumpster = box(4.5, 2.2, 2.6, 0x214c3a, [5, 1.1, 38]);
+    dumpster.visible = true;
+    scene.add(dumpster);
+    const parkingLines: THREE.Object3D[] = [];
+    for (let x = -15; x <= 15; x += 5) {
+      const line = box(0.08, 0.018, 9, 0xd8d5c8, [x, 0.02, 30]);
+      line.visible = true;
+      scene.add(line);
+      parkingLines.push(line);
+    }
+    [makeParkedCar([-12, 0, 33], 0x23262c), makeParkedCar([-4, 0, 31], 0x611b22), makeParkedCar([12, 0, 35], 0x1d3347)].forEach((car) => {
+      car.visible = true;
+      scene.add(car);
+      parkingLines.push(car);
+    });
+    const lamp1 = new THREE.PointLight(0xffd37b, 0, 22);
+    lamp1.position.set(-8, 6, 30);
+    const lamp2 = new THREE.PointLight(0xffd37b, 0, 22);
+    lamp2.position.set(10, 6, 52);
+    lamp1.intensity = 0.35;
+    lamp2.intensity = 0.28;
+    scene.add(lamp1, lamp2);
+    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, ...parkingLines];
+    const outsideLights = [lamp1, lamp2];
+
+    const keys: Record<string, boolean> = {};
+    const controlKeys = new Set(['w', 'a', 's', 'd', 'shift', 'e', 'q', 'escape']);
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = getInputKey(event);
+      if (controlKeys.has(key)) event.preventDefault();
+      keys[key] = true;
+      if (key === 'q') {
+        flashlight.visible = !flashlight.visible;
+        patchHud({ message: flashlight.visible ? 'Фонарик включен. Следы возле мусорки стали видны.' : 'Фонарик выключен.' });
+      }
+      if (key === 'e') interact();
+      if (key === 'escape') controls.unlock();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      const key = getInputKey(event);
+      if (controlKeys.has(key)) event.preventDefault();
+      keys[key] = false;
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    renderer.domElement.tabIndex = 0;
+    renderer.domElement.addEventListener('click', () => {
+      renderer.domElement.focus();
+      controls.lock();
+    });
+
+    const clock = new THREE.Clock();
+    engine.current = {
+      renderer,
+      scene,
+      camera,
+      controls,
+      clock,
+      keys,
+      customers,
+      monster: { mesh: monster, active: false, emerging: 0 },
+      flashlight,
+      traces,
+      colliders,
+      trashObjects,
+      stockObjects,
+      carts,
+      fridges,
+      loreNotes,
+      bandits,
+      phone,
+      cameraDesk,
+      exitDoor,
+      autoDoorLeft,
+      autoDoorRight,
+      helpExit,
+      outsideObjects,
+      outsideLights,
+    };
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      const state = engine.current;
+      if (!state) return;
+      const delta = Math.min(0.04, state.clock.getDelta());
+      const current = hudRef.current;
+
+      const move = new THREE.Vector3();
+      if (state.keys.w) move.z -= 1;
+      if (state.keys.s) move.z += 1;
+      if (state.keys.a) move.x -= 1;
+      if (state.keys.d) move.x += 1;
+      if (move.lengthSq() > 0 && current.phase !== 'menu') {
+        move.normalize();
+        const speed = state.keys.shift ? 8.8 : 4.6;
+        const old = state.camera.position.clone();
+        const forwardDir = new THREE.Vector3();
+        state.camera.getWorldDirection(forwardDir);
+        forwardDir.y = 0;
+        forwardDir.normalize();
+        const rightDir = new THREE.Vector3().crossVectors(forwardDir, state.camera.up).normalize();
+        state.camera.position.addScaledVector(forwardDir, -move.z * speed * delta);
+        state.camera.position.addScaledVector(rightDir, move.x * speed * delta);
+        state.camera.position.y = 1.7;
+        if (current.phase !== 'outside') {
+          state.camera.position.x = clamp(state.camera.position.x, -16.8, 17.2);
+          state.camera.position.z = clamp(state.camera.position.z, -15.8, 16.4);
+        } else {
+          state.camera.position.x = clamp(state.camera.position.x, -19, 19);
+          state.camera.position.z = clamp(state.camera.position.z, 17, 58);
+        }
+        const playerBox = new THREE.Box3().setFromCenterAndSize(state.camera.position, new THREE.Vector3(0.65, 1.7, 0.65));
+        if (state.colliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
+      }
+
+      state.flashlight.position.copy(state.camera.position);
+      const forward = new THREE.Vector3();
+      state.camera.getWorldDirection(forward);
+      state.flashlight.target.position.copy(state.camera.position).add(forward.multiplyScalar(10));
+      if (state.flashlight.visible && current.phase !== 'menu') {
+        patchHud({ battery: clamp(current.battery - delta * 1.7, 0, 100) });
+        if (current.battery <= 1) state.flashlight.visible = false;
+      }
+
+      const viewForward = new THREE.Vector3();
+      state.camera.getWorldDirection(viewForward);
+      state.carts.forEach((cart) => {
+        if (!cart.userData.follow) return;
+        const distance = cart.userData.kind === 'basket' ? 0.9 : 2.15;
+        const target = state.camera.position.clone().add(viewForward.clone().multiplyScalar(distance));
+        target.y = cart.userData.kind === 'basket' ? 0.65 : 0;
+        cart.position.lerp(target, Math.min(1, delta * 9));
+        cart.lookAt(state.camera.position.x, cart.position.y, state.camera.position.z);
+      });
+
+      state.fridges.forEach((fridge) => {
+        const localPlayer = fridge.mesh.worldToLocal(state.camera.position.clone());
+        const shouldOpen = fridge.manualOpen || (Math.abs(localPlayer.x) < 1.6 && Math.abs(localPlayer.z) < 2.1);
+        const targetZ = shouldOpen ? fridge.door.userData.openZ : fridge.door.userData.closedZ;
+        fridge.door.position.z += (targetZ - fridge.door.position.z) * Math.min(1, delta * 6);
+      });
+
+      const doorShouldOpen =
+        state.camera.position.distanceTo(state.exitDoor.position) < 4 ||
+        state.customers.some((customer) => customer.stage === 'leave' && customer.mesh.position.distanceTo(state.exitDoor.position) < 5) ||
+        current.phase === 'outside';
+      const leftTarget = doorShouldOpen ? 10.35 : 11.25;
+      const rightTarget = doorShouldOpen ? 13.65 : 12.75;
+      state.autoDoorLeft.position.z += (leftTarget - state.autoDoorLeft.position.z) * Math.min(1, delta * 7);
+      state.autoDoorRight.position.z += (rightTarget - state.autoDoorRight.position.z) * Math.min(1, delta * 7);
+
+      const atExitThreshold =
+        current.phase !== 'menu' &&
+        current.phase !== 'outside' &&
+        current.phase !== 'dead' &&
+        current.phase !== 'escaped' &&
+        state.camera.position.x > 16.45 &&
+        state.camera.position.z > 10 &&
+        state.camera.position.z < 14.2;
+      if (atExitThreshold) {
+        const finalReady = current.phase === 'armed' || Object.values(current.tasks).filter(Boolean).length >= 6;
+        completeTask('outside');
+        if (finalReady) {
+          state.customers.forEach((customer) => { customer.mesh.visible = false; });
+          state.trashObjects.forEach((item) => { item.visible = false; });
+          state.stockObjects.forEach((item) => { item.visible = false; });
+        }
+        state.helpExit.visible = true;
+        state.outsideObjects.forEach((object) => { object.visible = true; });
+        state.outsideLights.forEach((light) => { light.intensity = finalReady ? 1.55 : 0.86; });
+        state.scene.fog = new THREE.FogExp2(0x090b10, 0.052);
+        state.camera.position.set(0, 1.7, 22);
+        state.monster.mesh.visible = true;
+        state.monster.mesh.position.set(5, -1.5, 38);
+        state.monster.emerging = 0;
+        state.traces.forEach((trace) => { trace.visible = true; });
+        patchHud({
+          phase: 'outside',
+          outsideFinal: finalReady,
+          message: finalReady
+            ? 'Ты вышел на парковку с мусором. Контейнер сдвинулся сам.'
+            : 'Автоматические двери раскрылись. Ты вышел на пустую парковку, хотя смена еще не закончена.',
+        });
+        if (finalReady) scare('screamer-trash3d');
+      }
+
+      state.customers.forEach((customer) => {
+        if (customer.stage === 'gone') return;
+        if (customer.stage === 'waiting') {
+          if (!current.tasks.phone) return;
+          customer.leaveTime += delta;
+          if (customer.leaveTime < customer.spawnAt) return;
+          customer.stage = 'browse';
+          customer.mesh.visible = true;
+          customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
+          customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
+          customer.leaveTime = 0;
+          return;
+        }
+        if (customer.stage === 'leave') {
+          customer.leaveTime += delta;
+          if (customer.leaveTime > 12) {
+            customer.stage = 'gone';
+            customer.mesh.visible = false;
+            return;
+          }
+        }
+        if (customer.stage === 'checkout') {
+          customer.checkoutTime += delta;
+          if (!customer.angry && customer.checkoutTime > 13) {
+            customer.angry = true;
+            customer.stage = 'leave';
+            customer.leaveTime = 0;
+            customer.target.set(19.5, 0, 12);
+            const served = Math.min(current.served + 1, state.customers.length);
+            patchHud({
+              served,
+              fear: clamp(current.fear + 10, 0, 100),
+              message: `Клиент разозлился из-за ожидания, издал хриплый звук и ушел без покупки: ${customer.item}.`,
+            });
+            angrySound();
+            if (served >= state.customers.length) completeTask('cashier');
+            return;
+          }
+        }
+        const pos = customer.mesh.position;
+        const direction = customer.target.clone().sub(pos);
+        if (direction.length() > 0.15) {
+          const oldCustomerPos = pos.clone();
+          direction.normalize();
+          pos.add(direction.multiplyScalar(delta * (customer.stage === 'leave' ? 4.4 : 1.3)));
+          customer.mesh.lookAt(customer.target.x, pos.y, customer.target.z);
+          const customerBox = new THREE.Box3().setFromCenterAndSize(
+            new THREE.Vector3(pos.x, 0.9, pos.z),
+            new THREE.Vector3(0.58, 1.8, 0.58),
+          );
+          if (state.colliders.some((collider) => collider.intersectsBox(customerBox))) {
+            pos.copy(oldCustomerPos);
+            customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
+          }
+        } else if (customer.stage === 'leave') {
+          customer.stage = 'gone';
+          customer.mesh.visible = false;
+        } else if (customer.stage === 'browse') {
+          customer.stage = 'checkout';
+          customer.checkoutTime = 0;
+          customer.angry = false;
+          if (!customer.mesh.userData.carryingProduct) {
+            const carried = makeProduct(customer.item, 0xf0d23c);
+            carried.name = 'carriedProduct';
+            carried.scale.setScalar(0.42);
+            carried.position.set(0.42, 0.78, -0.22);
+            customer.mesh.add(carried);
+            customer.mesh.userData.carryingProduct = true;
+          }
+          customer.target.set(-3 + Math.random() * 2, 0, 10.2 + Math.random());
+          if (customer.weird) {
+            patchHud({ message: 'Клиент слишком долго смотрит в камеру. На лице нет моргания.' });
+            scare(customer.item === 'пустой чек' ? 'screamer-mask' : 'screamer-grin');
+          }
+        }
+      });
+
+      const allServed = state.customers.every((customer) => customer.stage === 'gone');
+      if (
+        allServed &&
+        current.tasks.cashier &&
+        current.tasks.stock &&
+        current.tasks.trash &&
+        current.tasks.cameras &&
+        current.tasks.bandits &&
+        current.phase === 'shift'
+      ) {
+        patchHud({ phase: 'armed', message: 'Смена почти закрыта. Теперь вынеси мусор на улицу, если решишься.' });
+      }
+
+      if (current.tasks.cameras && current.served >= 3) {
+        state.bandits.forEach((bandit) => {
+          if (!bandit.active && bandit.health > 0) {
+            bandit.active = true;
+            bandit.mesh.visible = true;
+          }
+        });
+      }
+
+      let livingBandits = 0;
+      state.bandits.forEach((bandit) => {
+        if (!bandit.active || bandit.health <= 0) return;
+        livingBandits += 1;
+        const toPlayer = state.camera.position.clone().sub(bandit.mesh.position);
+        toPlayer.y = 0;
+        if (toPlayer.length() > 1.35) {
+          bandit.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * 2.15));
+          bandit.mesh.lookAt(state.camera.position.x, 1.4, state.camera.position.z);
+        } else if (Math.random() < delta * 1.2) {
+          patchHud({
+            health: clamp(current.health - 8, 0, 100),
+            message: 'Бандит ударил тебя у прохода. Нужно отбиваться рядом клавишей E.',
+          });
+        }
+      });
+      if (current.tasks.cameras && current.served >= 3 && livingBandits === 0 && !current.tasks.bandits) completeTask('bandits');
+
+      if (current.phase === 'outside') {
+        state.monster.mesh.visible = true;
+        state.monster.active = true;
+        const emergeSpeed = current.outsideFinal ? 0.28 : 0.08;
+        const chaseSpeed = current.outsideFinal ? 3.15 : 1.35;
+        state.monster.emerging = clamp(state.monster.emerging + delta * emergeSpeed, 0, 1);
+        state.monster.mesh.position.y = -1.5 + state.monster.emerging * 1.6;
+        state.monster.mesh.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
+        const toPlayer = state.camera.position.clone().sub(state.monster.mesh.position);
+        toPlayer.y = 0;
+        if (state.monster.emerging >= 0.85 && toPlayer.length() > 1.8) {
+          state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * chaseSpeed));
+        }
+        if (!current.outsideFinal && state.monster.emerging > 0.45 && Math.random() < delta * 0.18) {
+          patchHud({
+            fear: clamp(current.fear + 2, 0, 100),
+            message: 'Снаружи слишком тихо. За контейнерами кто-то повторяет твои шаги.',
+          });
+        }
+        if (state.monster.mesh.position.distanceTo(state.camera.position) < 2.5) {
+          patchHud({ phase: 'dead', message: 'Монстр догнал тебя у контейнеров.' });
+          scare('screamer-trash3d');
+        }
+        if (state.camera.position.distanceTo(state.helpExit.position) < 4) {
+          patchHud({ phase: 'escaped', message: 'Ты добрался до выхода и вызвал помощь.' });
+        }
+      }
+
+      if (current.phase === 'shift' && current.tasks.cameras && state.monster.emerging < 0.26) {
+        state.monster.mesh.visible = true;
+        state.monster.mesh.position.set(13.5, -0.9, -14.5);
+        state.monster.mesh.rotation.y += delta * 0.25;
+        state.monster.emerging += delta * 0.018;
+        state.monster.mesh.scale.setScalar(0.38 + state.monster.emerging);
+      }
+
+      if (current.health <= 0 && current.phase !== 'dead') {
+        patchHud({ phase: 'dead', message: 'Ты потерял сознание между полками.' });
+        scare('screamer-grin');
+      }
+
+      if (Math.random() < delta * 0.05 && current.phase === 'shift') {
+        storeLight.intensity = storeLight.intensity > 1 ? 0.95 : 2.4;
+        patchHud({ message: 'Свет моргнул. За спиной прозвучали шаги.' });
+      }
+
+      if (Math.random() < delta * 0.006 && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
+        patchHud({ message: 'На секунду в стекле холодильника появилось лицо.' });
+        scare('screamer-mask');
+      }
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    const onResize = () => {
+      if (!mountRef.current) return;
+      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+      renderer.dispose();
+      mountRef.current?.removeChild(renderer.domElement);
+      engine.current = null;
+    };
   }, []);
 
-  if (loading) return <main className="container"><p>Загрузка…</p></main>;
+  const startAudio = () => {
+    const state = engine.current;
+    if (!state || state.audio) return;
+    const ctx = new AudioContext();
+    const hum = ctx.createOscillator();
+    const gain = ctx.createGain();
+    hum.frequency.value = 47;
+    hum.type = 'sine';
+    gain.gain.value = 0.025;
+    hum.connect(gain);
+    gain.connect(ctx.destination);
+    hum.start();
+    state.audio = ctx;
+    state.wind = hum;
+    patchHud({ message: 'Пространственный шум включен: гул ламп, ветер и шорохи магазина.' });
+  };
+
+  const startGame = () => {
+    const state = engine.current;
+    if (!state) return;
+    patchHud({
+      phase: 'shift',
+      message: 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
+      tasks: initialTasks,
+      served: 0,
+      stocked: 0,
+      trash: 0,
+      fear: 0,
+      health: 100,
+      battery: 100,
+      heldItem: null,
+      inventory: 0,
+      outsideFinal: false,
+    });
+    state.camera.position.set(0, 1.7, 14);
+    state.stockObjects.forEach((item) => { item.visible = Boolean(item.userData.initialVisible); });
+    state.trashObjects.forEach((item) => { item.visible = true; });
+    state.customers.forEach((customer) => {
+      customer.stage = 'waiting';
+      customer.leaveTime = 0;
+      customer.checkoutTime = 0;
+      customer.angry = false;
+      customer.mesh.visible = false;
+      customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
+      customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
+      customer.mesh.userData.carryingProduct = false;
+    });
+    state.carts.forEach((item) => {
+      item.userData.follow = false;
+      item.userData.items = 0;
+    });
+    state.fridges.forEach((item) => { item.manualOpen = false; });
+    state.loreNotes.forEach((item) => { item.visible = true; });
+    state.outsideObjects.forEach((object) => { object.visible = true; });
+    state.outsideLights.forEach((light) => { light.intensity = 0.35; });
+    state.monster.mesh.visible = false;
+    state.monster.emerging = 0;
+    state.renderer.domElement.focus();
+    state.controls.lock();
+    startAudio();
+  };
+
+  const interact = () => {
+    const state = engine.current;
+    if (!state) return;
+    const current = hudRef.current;
+    const pos = state.camera.position;
+    const near = (object: THREE.Object3D, range = 2.2) => object.position.distanceTo(pos) < range;
+
+    if (current.phase === 'menu') {
+      startGame();
+      return;
+    }
+
+    if (current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
+      state.camera.position.set(16.3, 1.7, 12);
+      state.outsideObjects.forEach((object) => { object.visible = true; });
+      state.outsideLights.forEach((light) => { light.intensity = 0.35; });
+      state.traces.forEach((trace) => { trace.visible = false; });
+      state.monster.mesh.visible = false;
+      state.monster.emerging = 0;
+      state.scene.fog = new THREE.FogExp2(0x050607, 0.026);
+      patchHud({
+        phase: 'shift',
+        outsideFinal: false,
+        message: 'Ты вернулся в магазин. Двери закрылись слишком медленно, будто их держали снаружи.',
+      });
+      return;
+    }
+
+    const fridge = state.fridges.find((item) => item.mesh.position.distanceTo(pos) < 3);
+    if (fridge) {
+      fridge.manualOpen = !fridge.manualOpen;
+      patchHud({ message: fridge.manualOpen ? 'Ты открыл холодильник. Холодный свет вытекает в проход.' : 'Ты закрыл дверцу холодильника.' });
+      return;
+    }
+
+    const lore = state.loreNotes.find((item) => item.visible && item.position.distanceTo(pos) < 2);
+    if (lore) {
+      lore.visible = false;
+      patchHud({ message: String(lore.userData.lore ?? 'Запись стерта. Остался только запах мокрой бумаги.'), fear: clamp(current.fear + 8, 0, 100) });
+      return;
+    }
+
+    const cart = state.carts.find((item) => item.position.distanceTo(pos) < 2.7);
+    if (cart) {
+      if (current.heldItem) {
+        cart.userData.items = Number(cart.userData.items ?? 0) + 1;
+        patchHud({
+          heldItem: null,
+          message: `${current.heldItem} лежит в ${cart.userData.kind === 'basket' ? 'корзине' : 'тележке'}. Внутри товаров: ${cart.userData.items}.`,
+        });
+        return;
+      }
+      const nextFollow = !cart.userData.follow;
+      state.carts.forEach((item) => { item.userData.follow = false; });
+      cart.userData.follow = nextFollow;
+      patchHud({
+        message: nextFollow
+          ? cart.userData.kind === 'basket' ? 'Ты взял ручную корзину. Она держится перед тобой.' : 'Ты взял тележку. Она катится перед тобой.'
+          : cart.userData.kind === 'basket' ? 'Ты поставил корзину.' : 'Ты отпустил тележку.',
+      });
+      return;
+    }
+
+    const bandit = state.bandits.find((item) => item.active && item.health > 0 && item.mesh.position.distanceTo(pos) < 2.4);
+    if (bandit) {
+      bandit.health -= 1;
+      bandit.mesh.position.add(bandit.mesh.position.clone().sub(pos).normalize().multiplyScalar(1.3));
+      patchHud({ message: 'Ты отбился от бандита. В проходе снова слышен чужой бег.' });
+      if (bandit.health <= 0) {
+        bandit.active = false;
+        bandit.mesh.visible = false;
+        patchHud({ message: 'Бандит убежал в темный проход. Но за холодильниками кто-то еще дышит.' });
+      }
+      return;
+    }
+
+    const visibleProduct = state.stockObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.25);
+    if (visibleProduct && !current.heldItem) {
+      const productName = String(visibleProduct.userData.product ?? 'товар');
+      visibleProduct.visible = false;
+      patchHud({
+        heldItem: productName,
+        inventory: current.inventory + 1,
+        message: `Ты взял товар: ${productName}. Его можно положить в тележку или вернуть на пустую полку.`,
+      });
+      return;
+    }
+
+    if (near(state.phone) && !current.tasks.phone) {
+      completeTask('phone');
+      patchHud({ message: 'Голос в телефоне: "Ночью нельзя выходить к мусорным контейнерам."' });
+      scare('screamer-dust');
+      return;
+    }
+    const customer = state.customers.find((item) => item.stage === 'checkout' && item.mesh.position.distanceTo(pos) < 4.2);
+    if (customer) {
+      customer.stage = 'leave';
+      customer.leaveTime = 0;
+      customer.checkoutTime = 0;
+      customer.angry = false;
+      customer.target.set(19.5, 0, 12);
+      const served = current.served + 1;
+      patchHud({ served, message: `Пробит товар: ${customer.item}. Клиент уходит из магазина.` });
+      if (served >= state.customers.length) completeTask('cashier');
+      if (customer.weird) scare('screamer-longneck');
+      return;
+    }
+    const hiddenProduct = state.stockObjects.find((item) => !item.visible && item.position.distanceTo(pos) < 5.5);
+    if (hiddenProduct && current.heldItem) {
+      hiddenProduct.visible = true;
+      const stocked = current.stocked + 1;
+      patchHud({
+        stocked,
+        heldItem: null,
+        message: `Полка пополнена: ${hiddenProduct.userData.product}.`,
+      });
+      if (stocked >= 18) completeTask('stock');
+      return;
+    }
+    const trash = state.trashObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.2);
+    if (trash) {
+      trash.visible = false;
+      const count = current.trash + 1;
+      patchHud({ trash: count, message: 'Мусор собран. Пакет будто тяжелее, чем должен быть.' });
+      if (count >= state.trashObjects.length) completeTask('trash');
+      return;
+    }
+    if (near(state.cameraDesk, 2.5)) {
+      completeTask('cameras');
+      const cameraOpen = !current.cameraOpen;
+      patchHud({ cameraOpen, message: cameraOpen ? 'Камеры открыты. На одной из них видна мусорка.' : 'Камеры закрыты.' });
+      if (cameraOpen) scare('screamer-mask');
+      return;
+    }
+    if (near(state.exitDoor, 3) && current.phase !== 'outside' && current.phase !== 'dead' && current.phase !== 'escaped') {
+      const finalReady = current.phase === 'armed' || Object.values(current.tasks).filter(Boolean).length >= 6;
+      completeTask('outside');
+      if (finalReady) {
+        state.customers.forEach((customer) => { customer.mesh.visible = false; });
+        state.trashObjects.forEach((item) => { item.visible = false; });
+        state.stockObjects.forEach((item) => { item.visible = false; });
+      }
+      state.helpExit.visible = true;
+      state.outsideObjects.forEach((object) => { object.visible = true; });
+      state.outsideLights.forEach((light) => { light.intensity = finalReady ? 1.45 : 0.82; });
+      state.scene.fog = new THREE.FogExp2(0x090b10, 0.052);
+      state.camera.position.set(0, 1.7, 22);
+      state.monster.mesh.visible = true;
+      state.monster.mesh.position.set(5, -1.5, 38);
+      state.monster.emerging = 0;
+      state.traces.forEach((trace) => { trace.visible = true; });
+      patchHud({
+        phase: 'outside',
+        outsideFinal: finalReady,
+        message: finalReady
+          ? 'Финальная сцена: ночь, туман, фонари. Монстр вылезает из мусорки.'
+          : 'Ты вышел на улицу раньше времени. Парковка пустая, но у контейнеров слышно мокрое дыхание.',
+      });
+      if (finalReady) scare('screamer-trash3d');
+      return;
+    }
+    patchHud({ message: 'Подойди ближе: телефон, касса, полки, мусор, камеры или выход.' });
+  };
 
   return (
-    <main className="container">
-      <header className="header">
-        <h1>Мой проект 🚀</h1>
-        {session && (
-          <button className="ghost" onClick={() => supabase.auth.signOut()}>
-            Выйти
-          </button>
-        )}
-      </header>
+    <main className="three-game">
+      <div className="viewport" ref={mountRef} />
 
-      {/* Нет сессии → показываем вход. Есть → показываем приложение. */}
-      {!session ? <Auth /> : <Entries userEmail={session.user.email ?? ''} />}
+      {hud.phase === 'menu' && (
+        <section className="title-screen">
+          <h1>Шестёрочка Horror</h1>
+          <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
+          <button type="button" onClick={startGame}>Начать смену</button>
+        </section>
+      )}
+
+      <section className="hud3d">
+        <div>
+          <b>{hud.phase === 'outside' ? 'Финал: улица' : 'Ночная смена'}</b>
+          <span>{hud.message}</span>
+          {hud.heldItem ? <em>В руках: {hud.heldItem}</em> : null}
+        </div>
+        <div className="bars">
+          <label>Здоровье <i style={{ width: `${hud.health}%` }} /></label>
+          <label>Батарея <i style={{ width: `${hud.battery}%` }} /></label>
+          <label>Страх <i style={{ width: `${hud.fear}%` }} /></label>
+        </div>
+      </section>
+
+      <aside className="quest-log">
+        <b>Квесты</b>
+        <span className={hud.tasks.phone ? 'done' : ''}>E: ответить на телефон</span>
+        <span className={hud.tasks.cashier ? 'done' : ''}>Обслужить клиентов: {hud.served}/5</span>
+        <span className={hud.tasks.stock ? 'done' : ''}>Пополнить полки: {hud.stocked}/18</span>
+        <span className={hud.tasks.trash ? 'done' : ''}>Собрать мусор: {hud.trash}/3</span>
+        <span className={hud.tasks.cameras ? 'done' : ''}>Посмотреть камеры</span>
+        <span className={hud.tasks.bandits ? 'done' : ''}>Отбиться от бандитов</span>
+        <span className={hud.tasks.outside ? 'done' : ''}>Вынести мусор наружу</span>
+      </aside>
+
+      <div className="controls-note">
+        WASD - ходьба · Shift - бег · мышь - обзор · E - действие · Q - фонарик · Esc - меню
+        {!hud.locked && hud.phase !== 'menu' ? <strong>Кликни по игре, чтобы захватить мышь</strong> : null}
+      </div>
+
+      {hud.cameraOpen && (
+        <div className="camera-panel">
+          <b>CAM 05:12</b>
+          <div className="camera-grid">
+            <i>SHOP AISLE</i>
+            <i>SECURITY</i>
+            <i>PARKING</i>
+            <i>TRASH ZONE</i>
+          </div>
+          <span>Помехи. Контейнеры. Что-то движется внутри мусорки.</span>
+        </div>
+      )}
+
+      {hud.screamer && (
+        <div className="screamer3d" style={{ backgroundImage: `url(/assets/${hud.screamer}.png)` }} />
+      )}
     </main>
   );
 }
