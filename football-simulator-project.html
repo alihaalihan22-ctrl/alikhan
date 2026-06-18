@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kairat Pro Football - 3D Football Simulator</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07120d;
+        --panel: #101b16;
+        --panel-2: #17231d;
+        --text: #f4f7f3;
+        --muted: #aab7ad;
+        --accent: #f3d23b;
+        --green: #2fb36d;
+        --line: rgba(255, 255, 255, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        background:
+          radial-gradient(circle at 20% 10%, rgba(47, 179, 109, 0.24), transparent 32rem),
+          linear-gradient(135deg, #07120d 0%, #102018 48%, #0a0f0c 100%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      header {
+        min-height: 70vh;
+        display: grid;
+        place-items: center;
+        padding: 48px 20px 28px;
+        background:
+          linear-gradient(rgba(7, 18, 13, 0.2), rgba(7, 18, 13, 0.88)),
+          repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 90px);
+      }
+
+      .hero {
+        width: min(1120px, 100%);
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+      }
+
+      h1 {
+        font-size: clamp(42px, 7vw, 86px);
+        line-height: 0.96;
+        margin: 0 0 22px;
+        max-width: 920px;
+      }
+
+      .lead {
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 24px);
+        line-height: 1.45;
+        max-width: 820px;
+      }
+
+      main {
+        width: min(1120px, 100%);
+        margin: 0 auto;
+        padding: 34px 20px 64px;
+      }
+
+      section {
+        border-top: 1px solid var(--line);
+        padding: 28px 0;
+      }
+
+      h2 {
+        font-size: 26px;
+        margin: 0 0 18px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+      }
+
+      .card strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .card span,
+      li {
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      a {
+        color: #fff2a3;
+        font-weight: 700;
+      }
+
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #141208;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      code {
+        color: #d9ffe9;
+        background: rgba(255,255,255,0.08);
+        padding: 2px 6px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="hero">
+        <div class="eyebrow">Unity / Unreal-ready game design</div>
+        <h1>Kairat Pro Football</h1>
+        <p class="lead">
+          Архитектура современной 3D-футбольной игры, вдохновленной FC 26:
+          реалистичная физика мяча, футболисты, стадионы, карьера, трансферы,
+          Казахстанская Премьер-лига, ФК Кайрат, редакторы и мультиплеер.
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>Открыть файлы</h2>
+        <div class="links">
+          <a class="button" href="./docs/fc26-inspired-football-sim-architecture.md">Архитектура проекта</a>
+          <a class="button secondary" href="./game-unity/README.md">Unity README</a>
+          <a class="button secondary" href="./game-unity/">Папка с кодом</a>
+        </div>
+      </section>
+
+      <section>
+        <h2>Что внутри</h2>
+        <div class="grid">
+          <div class="card">
+            <strong>3D матч</strong>
+            <span>Матч-цикл, табло, голы, повторы, камеры, правила и игровой темп.</span>
+          </div>
+          <div class="card">
+            <strong>Физика</strong>
+            <span>Rigidbody-мяч, удары, пас, дриблинг, вращение, кривая траектория и мокрый газон.</span>
+          </div>
+          <div class="card">
+            <strong>Карьера</strong>
+            <span>Карьера игрока и тренера, развитие характеристик, академии, трансферы и сезон.</span>
+          </div>
+          <div class="card">
+            <strong>Контент</strong>
+            <span>ФК Кайрат, Казахстанская Премьер-лига, кубки, стадионы и созданные клубы.</span>
+          </div>
+          <div class="card">
+            <strong>Мультиплеер</strong>
+            <span>Два игрока на одном компьютере, сетевой матч и будущие турниры друзей.</span>
+          </div>
+          <div class="card">
+            <strong>Презентация</strong>
+            <span>День и ночь, дождь, болельщики, комментаторы, освещение и редакторы формы/стадионов.</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Основные файлы кода</h2>
+        <ul>
+          <li><code>game-unity/Match/Ball/BallPhysicsController.cs</code> - физика мяча.</li>
+          <li><code>game-unity/Match/Player/PlayerMotor.cs</code> - движение футболиста.</li>
+          <li><code>game-unity/Match/Player/PlayerBallInteraction.cs</code> - пас, удар и дриблинг.</li>
+          <li><code>game-unity/Match/Replay/ReplayRecorder.cs</code> - буфер повторов голов.</li>
+          <li><code>game-unity/Modes/Career/</code> - карьера и трансферы.</li>
+          <li><code>game-unity/Data/sample-*.json</code> - Кайрат, КПЛ, турниры и стадионы.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

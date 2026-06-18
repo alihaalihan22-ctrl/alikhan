@@ -1,0 +1,31 @@
+{
+  "competitions": [
+    {
+      "competitionId": "kazakhstan_premier_league",
+      "displayName": "Kazakhstan Premier League",
+      "format": "League",
+      "seasonStartMonth": 3,
+      "seasonEndMonth": 11,
+      "clubs": ["kairat", "astana"],
+      "qualifiesToContinentalTournament": true,
+      "prizeMoney": 1800000
+    },
+    {
+      "competitionId": "kazakhstan_cup",
+      "displayName": "Kazakhstan Cup",
+      "format": "KnockoutCup",
+      "clubs": ["kairat", "astana"],
+      "qualifiesToContinentalTournament": false,
+      "prizeMoney": 600000
+    },
+    {
+      "competitionId": "champions_league_style",
+      "displayName": "Champions League",
+      "format": "LeaguePhaseAndKnockout",
+      "clubs": ["kairat"],
+      "qualifiesToContinentalTournament": false,
+      "prizeMoney": 25000000
+    }
+  ]
+}
+

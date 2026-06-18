@@ -1,0 +1,32 @@
+{
+  "stadiums": [
+    {
+      "stadiumId": "central_almaty",
+      "displayName": "Central Stadium Almaty",
+      "city": "Almaty",
+      "capacity": 23800,
+      "atmosphereRating": 86,
+      "supportsNightMatches": true,
+      "supportsRain": true
+    },
+    {
+      "stadiumId": "astana_arena",
+      "displayName": "Astana Arena",
+      "city": "Astana",
+      "capacity": 30000,
+      "atmosphereRating": 82,
+      "supportsNightMatches": true,
+      "supportsRain": true
+    },
+    {
+      "stadiumId": "custom_stadium",
+      "displayName": "Custom Stadium",
+      "city": "Custom",
+      "capacity": 12000,
+      "atmosphereRating": 60,
+      "supportsNightMatches": true,
+      "supportsRain": true
+    }
+  ]
+}
+

@@ -1,0 +1,41 @@
+{
+  "clubs": [
+    {
+      "clubId": "kairat",
+      "displayName": "FC Kairat",
+      "city": "Almaty",
+      "country": "Kazakhstan",
+      "primaryColor": "#F7D117",
+      "secondaryColor": "#101010",
+      "homeStadiumId": "central_almaty",
+      "transferBudget": 4500000,
+      "academyRating": 82,
+      "squadStyle": "technical_pressing"
+    },
+    {
+      "clubId": "astana",
+      "displayName": "Astana",
+      "city": "Astana",
+      "country": "Kazakhstan",
+      "primaryColor": "#43B6E8",
+      "secondaryColor": "#F7D117",
+      "homeStadiumId": "astana_arena",
+      "transferBudget": 4200000,
+      "academyRating": 75,
+      "squadStyle": "balanced"
+    },
+    {
+      "clubId": "created_club_template",
+      "displayName": "Created Club",
+      "city": "Custom",
+      "country": "Kazakhstan",
+      "primaryColor": "#1F8A70",
+      "secondaryColor": "#FFFFFF",
+      "homeStadiumId": "custom_stadium",
+      "transferBudget": 1000000,
+      "academyRating": 50,
+      "squadStyle": "custom"
+    }
+  ]
+}
+
