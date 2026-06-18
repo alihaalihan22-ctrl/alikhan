@@ -1,11 +1,16 @@
 {
-  "name": "nfact-teens-starter",
+  "name": "shesterochka-horror",
   "private": true,
   "version": "1.0.0",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "desktop": "npm run build && electron .",
+    "desktop:dev": "npm run build && electron .",
+    "desktop:pack": "npm run build && electron-builder --win portable",
+    "desktop:installer": "npm run build && electron-builder --win nsis",
     "preview": "vite preview",
     "db:login": "supabase login",
     "db:link": "supabase link",
@@ -13,6 +18,31 @@
     "db:push": "supabase db push",
     "ai:secret": "supabase secrets set",
     "ai:deploy": "supabase functions deploy ai"
+  },
+  "build": {
+    "appId": "com.shesterochka.horror",
+    "productName": "Shesterochka Horror",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "artifactName": "Shesterochka-Horror-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -25,6 +55,8 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "supabase": "^2.0.0",
     "typescript": "^5.5.3",
     "vite": "^5.4.8"
