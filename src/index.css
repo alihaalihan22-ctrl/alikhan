@@ -99,6 +99,145 @@ button:hover {
   min-width: 230px;
 }
 
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 58% 42%, rgba(115, 18, 28, .34), transparent 34%),
+    linear-gradient(90deg, rgba(0,0,0,.97), rgba(6,8,9,.84));
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+  background: rgba(5, 7, 8, .9);
+  box-shadow: 0 24px 90px rgba(0,0,0,.62);
+}
+
+.auth-kicker {
+  color: #ffcf6c;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-card h1 {
+  margin: 8px 0 10px;
+  color: #ffe08c;
+  font-size: 38px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.auth-card p {
+  color: #e8ded2;
+  line-height: 1.45;
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.auth-form input,
+.gemini-panel textarea {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 8px;
+  background: rgba(0,0,0,.58);
+  color: #fff7ef;
+  font: inherit;
+  padding: 12px;
+  outline: none;
+}
+
+.auth-message {
+  margin: 14px 0 0;
+  color: #ffcf6c;
+}
+
+.auth-skip {
+  margin-top: 12px;
+}
+
+.account-panel {
+  position: fixed;
+  right: 18px;
+  top: 16px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 8px;
+  background: rgba(0,0,0,.68);
+}
+
+.account-panel span {
+  max-width: 190px;
+  overflow: hidden;
+  color: #e8ded2;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-panel button,
+.ghost.small {
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.ghost {
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+}
+
+.gemini-panel {
+  position: fixed;
+  right: 18px;
+  top: 72px;
+  z-index: 45;
+  width: min(380px, calc(100vw - 36px));
+  padding: 14px;
+  border: 1px solid rgba(137, 220, 255, .36);
+  border-radius: 8px;
+  background: rgba(1, 10, 13, .86);
+  box-shadow: 0 0 38px rgba(77, 180, 220, .18);
+}
+
+.gemini-panel b {
+  display: block;
+  margin-bottom: 10px;
+  color: #9cecff;
+  text-transform: uppercase;
+}
+
+.gemini-panel form {
+  display: grid;
+  gap: 10px;
+}
+
+.gemini-panel textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.gemini-panel p {
+  margin: 12px 0 0;
+  color: #e9f8ff;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .hud3d {
   position: fixed;
   left: 18px;

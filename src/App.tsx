@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import type { Session } from '@supabase/supabase-js';
+import { Auth } from './components/Auth';
+import { supabase } from './lib/supabase';
 
 type Phase = 'menu' | 'shift' | 'armed' | 'outside' | 'escaped' | 'dead';
 type TaskKey = 'phone' | 'cashier' | 'stock' | 'trash' | 'cameras' | 'bandits' | 'outside';
@@ -524,6 +527,13 @@ function makeMonster() {
 
 export default function App() {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(!supabase);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [geminiOpen, setGeminiOpen] = useState(false);
+  const [geminiPrompt, setGeminiPrompt] = useState('');
+  const [geminiAnswer, setGeminiAnswer] = useState('');
+  const [geminiBusy, setGeminiBusy] = useState(false);
   const engine = useRef<{
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -577,9 +587,46 @@ export default function App() {
   });
   const hudRef = useRef(hud);
 
+  const isSignedIn = Boolean(session?.user || offlineMode);
+
   useEffect(() => {
     hudRef.current = hud;
   }, [hud]);
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setAuthReady(true);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const user = session?.user;
+    if (!supabase || !user) return;
+    supabase.from('profiles').upsert({
+      id: user.id,
+      email: user.email,
+      display_name: user.email?.split('@')[0] ?? 'player',
+      last_login_at: new Date().toISOString(),
+    }).then(() => undefined);
+  }, [session]);
 
   const patchHud = (patch: Partial<Hud>) => {
     setHud((current) => ({ ...current, ...patch }));
@@ -587,6 +634,61 @@ export default function App() {
 
   const completeTask = (task: TaskKey) => {
     setHud((current) => ({ ...current, tasks: { ...current.tasks, [task]: true } }));
+  };
+
+  const saveGame = async (data: Record<string, unknown>) => {
+    if (!supabase || !session?.user) return;
+    await supabase.from('game_saves').upsert({
+      user_id: session.user.id,
+      slot: 'default',
+      data,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,slot' });
+  };
+
+  const askGemini = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!geminiPrompt.trim() || geminiBusy) return;
+    setGeminiBusy(true);
+    setGeminiAnswer('');
+
+    const system = [
+      'You are Gemini Help inside a first-person indie horror game.',
+      'Give short practical hints without spoiling everything.',
+      'The game has customers, cashier work, restocking shelves, cameras, trash bags, dumpsters, and a monster chase.',
+    ].join(' ');
+    const prompt = `${geminiPrompt}\n\nCurrent game state: ${JSON.stringify({
+      phase: hudRef.current.phase,
+      tasks: hudRef.current.tasks,
+      served: hudRef.current.served,
+      stocked: hudRef.current.stocked,
+      trash: hudRef.current.trash,
+      health: hudRef.current.health,
+      battery: hudRef.current.battery,
+    })}`;
+
+    try {
+      if (!supabase) {
+        setGeminiAnswer('Gemini needs Supabase settings first.');
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke('ai', {
+        body: { prompt, system },
+      });
+      const answer = error ? error.message : data?.text ?? 'No answer returned.';
+      setGeminiAnswer(answer);
+      if (session?.user) {
+        await supabase.from('ai_help_logs').insert({
+          user_id: session.user.id,
+          question: geminiPrompt.trim(),
+          answer,
+        });
+      }
+    } catch {
+      setGeminiAnswer('Gemini helper is not deployed yet. Deploy the Supabase function and set GEMINI_API_KEY.');
+    } finally {
+      setGeminiBusy(false);
+    }
   };
 
   const scare = (name: string) => {
@@ -1397,6 +1499,7 @@ export default function App() {
   const startGame = () => {
     const state = engine.current;
     if (!state) return;
+    if (!isSignedIn) return;
     patchHud({
       phase: 'shift',
       message: 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
@@ -1438,6 +1541,19 @@ export default function App() {
     state.renderer.domElement.focus();
     state.controls.lock();
     startAudio();
+    saveGame({
+      event: 'shift_started',
+      phase: 'shift',
+      startedAt: new Date().toISOString(),
+    });
+  };
+
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setOfflineMode(false);
+    setSession(null);
+    patchHud({ phase: 'menu', message: 'Signed out.' });
+    engine.current?.controls.unlock();
   };
 
   const interact = () => {
@@ -1633,11 +1749,40 @@ export default function App() {
     <main className="three-game">
       <div className="viewport" ref={mountRef} />
 
-      {hud.phase === 'menu' && (
+      {authReady && !isSignedIn && (
+        <Auth onSkip={!supabase ? () => setOfflineMode(true) : undefined} />
+      )}
+
+      {isSignedIn && hud.phase === 'menu' && (
         <section className="title-screen">
           <h1>Шестёрочка Horror</h1>
           <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
           <button type="button" onClick={startGame}>Начать смену</button>
+        </section>
+      )}
+
+      {isSignedIn && (
+        <div className="account-panel">
+          <span>{session?.user.email ?? 'offline player'}</span>
+          <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
+          <button type="button" className="ghost small" onClick={signOut}>Exit</button>
+        </div>
+      )}
+
+      {isSignedIn && geminiOpen && (
+        <section className="gemini-panel">
+          <b>Gemini Help</b>
+          <form onSubmit={askGemini}>
+            <textarea
+              placeholder="Ask how to survive, where to go, or what the next task is..."
+              value={geminiPrompt}
+              onChange={(e) => setGeminiPrompt(e.target.value)}
+            />
+            <button type="submit" disabled={geminiBusy}>
+              {geminiBusy ? 'Thinking...' : 'Ask'}
+            </button>
+          </form>
+          {geminiAnswer && <p>{geminiAnswer}</p>}
         </section>
       )}
 
