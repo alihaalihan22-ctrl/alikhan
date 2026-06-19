@@ -25,6 +25,14 @@ type Hud = {
   tasks: Record<TaskKey, boolean>;
 };
 
+type GameSettings = {
+  graphics: 'low' | 'medium' | 'high';
+  volume: number;
+  sensitivity: number;
+  showHud: boolean;
+  mobileControls: boolean;
+};
+
 type CustomerAi = {
   mesh: THREE.Group;
   stage: 'waiting' | 'browse' | 'checkout' | 'leave' | 'gone' | 'weird';
@@ -525,6 +533,15 @@ function makeMonster() {
 
 export default function App() {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const [paused, setPaused] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<GameSettings>({
+    graphics: 'high',
+    volume: 80,
+    sensitivity: 55,
+    showHud: true,
+    mobileControls: true,
+  });
   const [geminiOpen, setGeminiOpen] = useState(false);
   const [geminiPrompt, setGeminiPrompt] = useState('');
   const [geminiAnswer, setGeminiAnswer] = useState('');
@@ -561,6 +578,10 @@ export default function App() {
     audio?: AudioContext;
     wind?: OscillatorNode;
   } | null>(null);
+  const settingsRef = useRef(settings);
+  const pausedRef = useRef(paused);
+  const mobileMoveRef = useRef({ x: 0, y: 0 });
+  const mobileLookRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
   const [hud, setHud] = useState<Hud>({
     phase: 'menu',
@@ -585,6 +606,25 @@ export default function App() {
   useEffect(() => {
     hudRef.current = hud;
   }, [hud]);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+    const state = engine.current;
+    if (!state) return;
+    state.renderer.setPixelRatio(
+      settings.graphics === 'high'
+        ? Math.min(window.devicePixelRatio, 1.75)
+        : settings.graphics === 'medium'
+          ? Math.min(window.devicePixelRatio, 1.25)
+          : 1,
+    );
+    state.renderer.shadowMap.enabled = settings.graphics !== 'low';
+  }, [settings]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    if (paused) engine.current?.controls.unlock();
+  }, [paused]);
 
   const patchHud = (patch: Partial<Hud>) => {
     setHud((current) => ({ ...current, ...patch }));
@@ -1030,7 +1070,10 @@ export default function App() {
         patchHud({ message: flashlight.visible ? 'Фонарик включен. Следы возле мусорки стали видны.' : 'Фонарик выключен.' });
       }
       if (key === 'e') interact();
-      if (key === 'escape') controls.unlock();
+      if (key === 'escape' && hudRef.current.phase !== 'menu') {
+        setPaused((value) => !value);
+        controls.unlock();
+      }
     };
     const onKeyUp = (event: KeyboardEvent) => {
       const key = getInputKey(event);
@@ -1083,13 +1126,16 @@ export default function App() {
       if (!state) return;
       const delta = Math.min(0.04, state.clock.getDelta());
       const current = hudRef.current;
+      const isPaused = pausedRef.current;
 
       const move = new THREE.Vector3();
       if (state.keys.w) move.z -= 1;
       if (state.keys.s) move.z += 1;
       if (state.keys.a) move.x -= 1;
       if (state.keys.d) move.x += 1;
-      if (move.lengthSq() > 0 && current.phase !== 'menu') {
+      move.x += mobileMoveRef.current.x;
+      move.z += mobileMoveRef.current.y;
+      if (move.lengthSq() > 0 && current.phase !== 'menu' && !isPaused) {
         move.normalize();
         const speed = state.keys.shift ? 8.8 : 4.6;
         const old = state.camera.position.clone();
@@ -1111,6 +1157,11 @@ export default function App() {
         const playerBox = new THREE.Box3().setFromCenterAndSize(state.camera.position, new THREE.Vector3(0.65, 1.7, 0.65));
         const activeColliders = current.phase === 'outside' ? state.outsideColliders : state.colliders;
         if (activeColliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
+      }
+
+      if (isPaused) {
+        renderer.render(scene, camera);
+        return;
       }
 
       state.flashlight.position.copy(state.camera.position);
@@ -1432,7 +1483,7 @@ export default function App() {
     const gain = ctx.createGain();
     hum.frequency.value = 47;
     hum.type = 'sine';
-    gain.gain.value = 0.025;
+    gain.gain.value = 0.025 * (settingsRef.current.volume / 100);
     hum.connect(gain);
     gain.connect(ctx.destination);
     hum.start();
@@ -1444,6 +1495,8 @@ export default function App() {
   const startGame = () => {
     const state = engine.current;
     if (!state) return;
+    setPaused(false);
+    setSettingsOpen(false);
     patchHud({
       phase: 'shift',
       message: 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
@@ -1490,6 +1543,55 @@ export default function App() {
       phase: 'shift',
       startedAt: new Date().toISOString(),
     });
+  };
+
+  const toggleFlashlight = () => {
+    const state = engine.current;
+    if (!state) return;
+    state.flashlight.visible = !state.flashlight.visible;
+    patchHud({ message: state.flashlight.visible ? 'Фонарик включен.' : 'Фонарик выключен.' });
+  };
+
+  const setMobileRun = (value: boolean) => {
+    const state = engine.current;
+    if (!state) return;
+    state.keys.shift = value;
+  };
+
+  const handleMoveStick = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+    mobileMoveRef.current = {
+      x: clamp(x, -1, 1),
+      y: clamp(y, -1, 1),
+    };
+  };
+
+  const resetMoveStick = () => {
+    mobileMoveRef.current = { x: 0, y: 0 };
+  };
+
+  const handleLookStart = (event: React.PointerEvent<HTMLDivElement>) => {
+    mobileLookRef.current = { active: true, lastX: event.clientX, lastY: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleLookMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const state = engine.current;
+    if (!state || !mobileLookRef.current.active || pausedRef.current || hudRef.current.phase === 'menu') return;
+    const dx = event.clientX - mobileLookRef.current.lastX;
+    const dy = event.clientY - mobileLookRef.current.lastY;
+    mobileLookRef.current.lastX = event.clientX;
+    mobileLookRef.current.lastY = event.clientY;
+    const sensitivity = 0.0014 + settingsRef.current.sensitivity * 0.000035;
+    state.camera.rotation.order = 'YXZ';
+    state.camera.rotation.y -= dx * sensitivity;
+    state.camera.rotation.x = clamp(state.camera.rotation.x - dy * sensitivity, -1.35, 1.35);
+  };
+
+  const handleLookEnd = () => {
+    mobileLookRef.current.active = false;
   };
 
   const interact = () => {
@@ -1694,8 +1796,78 @@ export default function App() {
       )}
 
       <div className="account-panel">
+        <button type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
         <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
       </div>
+
+      {paused && hud.phase !== 'menu' && (
+        <section className="pause-screen">
+          <span className="menu-kicker">Paused</span>
+          <h2>Shift suspended</h2>
+          <div className="menu-actions">
+            <button type="button" onClick={() => setPaused(false)}>Resume</button>
+            <button type="button" className="ghost" onClick={() => setSettingsOpen(true)}>Settings</button>
+            <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu' })}>Main menu</button>
+          </div>
+        </section>
+      )}
+
+      {settingsOpen && (
+        <section className="settings-screen">
+          <div className="settings-panel">
+            <span className="menu-kicker">Options</span>
+            <h2>Steam-style settings</h2>
+            <label>
+              Graphics
+              <select
+                value={settings.graphics}
+                onChange={(event) => setSettings((current) => ({ ...current, graphics: event.target.value as GameSettings['graphics'] }))}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label>
+              Volume {settings.volume}%
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={settings.volume}
+                onChange={(event) => setSettings((current) => ({ ...current, volume: Number(event.target.value) }))}
+              />
+            </label>
+            <label>
+              Touch sensitivity {settings.sensitivity}%
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={settings.sensitivity}
+                onChange={(event) => setSettings((current) => ({ ...current, sensitivity: Number(event.target.value) }))}
+              />
+            </label>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={settings.showHud}
+                onChange={(event) => setSettings((current) => ({ ...current, showHud: event.target.checked }))}
+              />
+              Show HUD
+            </label>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={settings.mobileControls}
+                onChange={(event) => setSettings((current) => ({ ...current, mobileControls: event.target.checked }))}
+              />
+              Mobile controls
+            </label>
+            <button type="button" onClick={() => setSettingsOpen(false)}>Close</button>
+          </div>
+        </section>
+      )}
 
       {geminiOpen && (
         <section className="gemini-panel">
@@ -1714,7 +1886,7 @@ export default function App() {
         </section>
       )}
 
-      <section className="hud3d">
+      {settings.showHud && <section className="hud3d">
         <div>
           <b>{hud.phase === 'outside' ? 'Финал: улица' : 'Ночная смена'}</b>
           <span>{hud.message}</span>
@@ -1725,9 +1897,9 @@ export default function App() {
           <label>Батарея <i style={{ width: `${hud.battery}%` }} /></label>
           <label>Страх <i style={{ width: `${hud.fear}%` }} /></label>
         </div>
-      </section>
+      </section>}
 
-      <aside className="quest-log">
+      {settings.showHud && <aside className="quest-log">
         <b>Квесты</b>
         <span className={hud.tasks.phone ? 'done' : ''}>E: ответить на телефон</span>
         <span className={hud.tasks.cashier ? 'done' : ''}>Обслужить клиентов: {hud.served}/5</span>
@@ -1736,12 +1908,39 @@ export default function App() {
         <span className={hud.tasks.cameras ? 'done' : ''}>Посмотреть камеры</span>
         <span className={hud.tasks.bandits ? 'done' : ''}>Отбиться от бандитов</span>
         <span className={hud.tasks.outside ? 'done' : ''}>Вынести мусор наружу</span>
-      </aside>
+      </aside>}
 
-      <div className="controls-note">
+      {settings.showHud && <div className="controls-note">
         WASD - ходьба · Shift - бег · мышь - обзор · E - действие · Q - фонарик · Esc - меню
         {!hud.locked && hud.phase !== 'menu' ? <strong>Кликни по игре, чтобы захватить мышь</strong> : null}
-      </div>
+      </div>}
+
+      {settings.mobileControls && hud.phase !== 'menu' && (
+        <div className="mobile-controls">
+          <div
+            className="move-stick"
+            onPointerDown={handleMoveStick}
+            onPointerMove={handleMoveStick}
+            onPointerUp={resetMoveStick}
+            onPointerCancel={resetMoveStick}
+          >
+            <span />
+          </div>
+          <div
+            className="look-pad"
+            onPointerDown={handleLookStart}
+            onPointerMove={handleLookMove}
+            onPointerUp={handleLookEnd}
+            onPointerCancel={handleLookEnd}
+          />
+          <div className="mobile-buttons">
+            <button type="button" onPointerDown={() => setMobileRun(true)} onPointerUp={() => setMobileRun(false)} onPointerCancel={() => setMobileRun(false)}>Run</button>
+            <button type="button" onClick={interact}>E</button>
+            <button type="button" onClick={toggleFlashlight}>Light</button>
+            <button type="button" className="ghost" onClick={() => setPaused(true)}>Pause</button>
+          </div>
+        </div>
+      )}
 
       {hud.cameraOpen && (
         <div className="camera-panel">
