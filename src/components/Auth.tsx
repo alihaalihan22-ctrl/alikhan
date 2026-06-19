@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 type AuthProps = {
-  onSkip?: () => void;
+  onClose?: () => void;
+  onSuccess?: () => void;
 };
 
-export function Auth({ onSkip }: AuthProps) {
+export function Auth({ onClose, onSuccess }: AuthProps) {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'email' | 'code'>('email');
@@ -59,7 +60,10 @@ export function Auth({ onSkip }: AuthProps) {
       });
 
       if (error) setMessage(error.message);
-      else setMessage('Login complete. Opening the night shift.');
+      else {
+        setMessage('Login complete. Opening the night shift.');
+        onSuccess?.();
+      }
     } catch {
       setMessage('Wrong or expired code.');
     } finally {
@@ -72,7 +76,7 @@ export function Auth({ onSkip }: AuthProps) {
       <div className="auth-card">
         <span className="auth-kicker">Secure access</span>
         <h1>Shesterochka Horror</h1>
-        <p>Enter your Gmail, receive a one-time code, then Gemini Help opens inside the game.</p>
+        <p>Enter your email, receive a one-time code, then continue the night shift.</p>
 
         {step === 'email' ? (
           <form onSubmit={sendCode} className="auth-form">
@@ -107,9 +111,9 @@ export function Auth({ onSkip }: AuthProps) {
         )}
 
         {message && <p className="auth-message">{message}</p>}
-        {onSkip && (
-          <button type="button" className="ghost auth-skip" onClick={onSkip}>
-            Play offline
+        {onClose && (
+          <button type="button" className="ghost auth-skip" onClick={onClose}>
+            Back
           </button>
         )}
       </div>

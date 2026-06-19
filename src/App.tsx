@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import type { Session } from '@supabase/supabase-js';
+import { Auth } from './components/Auth';
 import { supabase } from './lib/supabase';
 
 type Phase = 'menu' | 'shift' | 'armed' | 'outside' | 'escaped' | 'dead';
@@ -535,6 +537,8 @@ export default function App() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [paused, setPaused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const [settings, setSettings] = useState<GameSettings>({
     graphics: 'high',
     volume: 80,
@@ -604,6 +608,23 @@ export default function App() {
   const hudRef = useRef(hud);
 
   useEffect(() => {
+    if (!supabase) return;
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      if (nextSession) setAuthOpen(false);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     hudRef.current = hud;
   }, [hud]);
 
@@ -635,7 +656,15 @@ export default function App() {
   };
 
   const saveGame = async (data: Record<string, unknown>) => {
-    localStorage.setItem('shesterochka-save', JSON.stringify({ ...data, updatedAt: new Date().toISOString() }));
+    const save = { ...data, updatedAt: new Date().toISOString() };
+    localStorage.setItem('shesterochka-save', JSON.stringify(save));
+
+    if (!supabase || !session?.user) return;
+    await supabase.from('game_saves').upsert({
+      user_id: session.user.id,
+      slot: 'default',
+      data: save,
+    }, { onConflict: 'user_id,slot' });
   };
 
   const askGemini = async (e: React.FormEvent) => {
@@ -1791,14 +1820,27 @@ export default function App() {
         <section className="title-screen">
           <h1>Шестёрочка Horror</h1>
           <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
-          <button type="button" onClick={startGame}>Начать смену</button>
+          <div className="guest-login-actions">
+            <button type="button" onClick={startGame}>Играть как гость</button>
+            <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Войти</button>
+            <span>{session?.user.email ? `Вошел: ${session.user.email}` : 'Гость: прогресс хранится на этом устройстве'}</span>
+          </div>
         </section>
       )}
 
       <div className="account-panel">
+        <span>{session?.user.email ?? 'Guest'}</span>
+        {!session && <button type="button" onClick={() => setAuthOpen(true)}>Login</button>}
         <button type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
         <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
       </div>
+
+      {authOpen && (
+        <Auth
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => setAuthOpen(false)}
+        />
+      )}
 
       {paused && hud.phase !== 'menu' && (
         <section className="pause-screen">

@@ -96,9 +96,21 @@ button:hover {
   line-height: 1.55;
 }
 
-.title-screen button {
-  width: fit-content;
-  min-width: 230px;
+.guest-login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.guest-login-actions button {
+  min-width: 210px;
+}
+
+.guest-login-actions span {
+  width: 100%;
+  color: rgba(255, 247, 239, .74);
+  font-size: 13px;
 }
 
 .menu-kicker {
@@ -588,6 +600,34 @@ button:hover {
 }
 
 @media (max-width: 760px) {
+  .title-screen {
+    align-content: end;
+    padding: 22px;
+  }
+
+  .title-screen h1 {
+    font-size: clamp(42px, 15vw, 74px);
+  }
+
+  .guest-login-actions {
+    display: grid;
+    width: min(100%, 360px);
+  }
+
+  .guest-login-actions button {
+    width: 100%;
+  }
+
+  .account-panel {
+    left: 12px;
+    right: 12px;
+    justify-content: flex-end;
+  }
+
+  .account-panel span {
+    margin-right: auto;
+  }
+
   .hud3d {
     display: grid;
   }
