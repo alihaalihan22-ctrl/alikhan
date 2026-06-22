@@ -35,6 +35,18 @@ type GameSettings = {
   mobileControls: boolean;
 };
 
+type CashierSkinId = 'uniform' | 'security' | 'raincoat' | 'night';
+
+type CashierSkin = {
+  id: CashierSkinId;
+  name: string;
+  description: string;
+  sleeve: number;
+  glove: number;
+  badge: number;
+  skin: number;
+};
+
 type CustomerAi = {
   mesh: THREE.Group;
   stage: 'waiting' | 'browse' | 'checkout' | 'leave' | 'gone' | 'weird';
@@ -69,6 +81,52 @@ type FridgeUnit = {
 };
 
 const productNames = ['Pepsi', 'Fanta', 'Вода', 'Чипсы', 'Бургер', 'Хот-дог', 'Корн-дог', 'Шоколадка', 'Печенье', 'Овощи', 'Фрукты', 'Мороженое'];
+const cashierSkins: CashierSkin[] = [
+  {
+    id: 'uniform',
+    name: 'Ночная форма',
+    description: 'Красная форма кассира, бейдж и обычные руки.',
+    sleeve: 0xa51520,
+    glove: 0x161719,
+    badge: 0xffd56f,
+    skin: 0xf0aa77,
+  },
+  {
+    id: 'security',
+    name: 'Охрана',
+    description: 'Темная куртка, плотные перчатки и металлический бейдж.',
+    sleeve: 0x15191d,
+    glove: 0x050607,
+    badge: 0x9fb2bd,
+    skin: 0xd09165,
+  },
+  {
+    id: 'raincoat',
+    name: 'Дождевик',
+    description: 'Желтый плащ для выхода к контейнерам под дождем.',
+    sleeve: 0xd8a928,
+    glove: 0x2c2f2c,
+    badge: 0xeef3ff,
+    skin: 0xe0b08a,
+  },
+  {
+    id: 'night',
+    name: 'Черная смена',
+    description: 'Матовая черная форма, меньше бликов на камерах.',
+    sleeve: 0x07080a,
+    glove: 0x101010,
+    badge: 0x8b1f2a,
+    skin: 0xb87954,
+  },
+];
+
+const defaultCashierSkin = cashierSkins[0];
+
+const getSavedSkin = (): CashierSkinId => {
+  const saved = localStorage.getItem('shesterochka-cashier-skin') as CashierSkinId | null;
+  return cashierSkins.some((skin) => skin.id === saved) ? saved! : 'uniform';
+};
+
 const customerWaypoints = [
   new THREE.Vector3(-15, 0, -13),
   new THREE.Vector3(-12, 0, 8),
@@ -239,6 +297,50 @@ function makeHuman(color: number, skin = 0xf0aa77, dark = false) {
   const shoeL = box(0.18, 0.08, 0.28, 0x050505, [-0.13, 0.035, -0.04]);
   const shoeR = box(0.18, 0.08, 0.28, 0x050505, [0.13, 0.035, -0.04]);
   group.add(body, head, hair, eyeL, eyeR, nose, mouth, armL, armR, legL, legR, shoeL, shoeR);
+  return group;
+}
+
+function paintCashierViewModel(group: THREE.Group, skin: CashierSkin) {
+  group.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const part = child.userData.cashierPart;
+    const color = part === 'skin' ? skin.skin : part === 'glove' ? skin.glove : part === 'badge' ? skin.badge : skin.sleeve;
+    const metalness = part === 'badge' ? 0.55 : 0.03;
+    child.material = new THREE.MeshStandardMaterial({
+      color,
+      roughness: part === 'glove' ? 0.38 : 0.62,
+      metalness,
+    });
+  });
+}
+
+function makeCashierViewModel(skin: CashierSkin) {
+  const group = new THREE.Group();
+  group.name = 'cashier-view-model';
+  group.position.set(0, -0.95, -1.18);
+  const sleeveGeometry = new THREE.CapsuleGeometry(0.075, 0.62, 6, 12);
+  const handGeometry = new THREE.SphereGeometry(0.095, 16, 12);
+  [-1, 1].forEach((side) => {
+    const sleeve = new THREE.Mesh(sleeveGeometry);
+    sleeve.userData.cashierPart = 'sleeve';
+    sleeve.position.set(side * 0.35, -0.08, 0.04);
+    sleeve.rotation.set(0.82, 0, side * 0.24);
+    const hand = new THREE.Mesh(handGeometry);
+    hand.userData.cashierPart = 'skin';
+    hand.position.set(side * 0.48, -0.34, -0.1);
+    hand.scale.set(1, 0.72, 1.15);
+    const glove = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.045, 0.2));
+    glove.userData.cashierPart = 'glove';
+    glove.position.set(side * 0.48, -0.28, -0.17);
+    glove.rotation.z = side * 0.08;
+    group.add(sleeve, hand, glove);
+  });
+  const badge = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.02));
+  badge.userData.cashierPart = 'badge';
+  badge.position.set(-0.18, 0.12, 0.02);
+  badge.rotation.x = -0.18;
+  group.add(badge);
+  paintCashierViewModel(group, skin);
   return group;
 }
 
@@ -537,6 +639,8 @@ export default function App() {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [paused, setPaused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [skinsOpen, setSkinsOpen] = useState(false);
+  const [equippedSkin, setEquippedSkin] = useState<CashierSkinId>(() => getSavedSkin());
   const [authOpen, setAuthOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [settings, setSettings] = useState<GameSettings>({
@@ -568,6 +672,7 @@ export default function App() {
     stockObjects: THREE.Object3D[];
     carts: THREE.Object3D[];
     fridges: FridgeUnit[];
+    cashierView: THREE.Group;
     loreNotes: THREE.Object3D[];
     bandits: BanditAi[];
     phone: THREE.Object3D;
@@ -647,12 +752,33 @@ export default function App() {
     if (paused) engine.current?.controls.unlock();
   }, [paused]);
 
+  useEffect(() => {
+    if (!engine.current) return;
+    const skin = cashierSkins.find((item) => item.id === equippedSkin) ?? defaultCashierSkin;
+    paintCashierViewModel(engine.current.cashierView, skin);
+  }, [equippedSkin]);
+
   const patchHud = (patch: Partial<Hud>) => {
     setHud((current) => ({ ...current, ...patch }));
   };
 
   const completeTask = (task: TaskKey) => {
     setHud((current) => ({ ...current, tasks: { ...current.tasks, [task]: true } }));
+  };
+
+  const selectedSkin = cashierSkins.find((skin) => skin.id === equippedSkin) ?? defaultCashierSkin;
+
+  const equipSkin = (skinId: CashierSkinId) => {
+    const skin = cashierSkins.find((item) => item.id === skinId) ?? defaultCashierSkin;
+    setEquippedSkin(skin.id);
+    localStorage.setItem('shesterochka-cashier-skin', skin.id);
+    if (engine.current) paintCashierViewModel(engine.current.cashierView, skin);
+    patchHud({ message: `Скин надет: ${skin.name}. В первом лице изменились руки кассира.` });
+  };
+
+  const removeSkin = () => {
+    equipSkin('uniform');
+    patchHud({ message: 'Скин снят. Надета обычная ночная форма кассира.' });
   };
 
   const saveGame = async (data: Record<string, unknown>) => {
@@ -667,25 +793,32 @@ export default function App() {
     }, { onConflict: 'user_id,slot' });
   };
 
-  const askGemini = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!geminiPrompt.trim() || geminiBusy) return;
+  const requestGemini = async (question: string) => {
+    const cleanQuestion = question.trim();
+    if (!cleanQuestion || geminiBusy) return;
     setGeminiBusy(true);
     setGeminiAnswer('');
 
     const system = [
-      'You are Gemini Help inside a first-person indie horror game.',
-      'Give short practical hints without spoiling everything.',
-      'The game has customers, cashier work, restocking shelves, cameras, trash bags, dumpsters, and a monster chase.',
+      'Ты встроенный помощник Gemini внутри игры "Шестёрочка Horror".',
+      'Отвечай по-русски, коротко, как внутриигровая подсказка, без длинных лекций.',
+      'Не ломай атмосферу хоррора: подсказывай через действия игрока, камеры, звук, свет, кассу, полки, мусор и улицу.',
+      'Сюжет: ночная смена кассира, странный звонок охраны, клиенты, пополнение полок, камеры, мусорные пакеты, контейнеры и финальная погоня 3D-монстра.',
+      'Если игрок просит "что дальше", скажи ближайшую полезную цель. Если просит выжить, дай тактический совет.',
     ].join(' ');
-    const prompt = `${geminiPrompt}\n\nCurrent game state: ${JSON.stringify({
+    const prompt = `${cleanQuestion}\n\nCurrent game state: ${JSON.stringify({
       phase: hudRef.current.phase,
       tasks: hudRef.current.tasks,
       served: hudRef.current.served,
       stocked: hudRef.current.stocked,
       trash: hudRef.current.trash,
+      trashDelivered: hudRef.current.trashDelivered,
       health: hudRef.current.health,
       battery: hudRef.current.battery,
+      fear: hudRef.current.fear,
+      heldItem: hudRef.current.heldItem,
+      selectedCashierSkin: selectedSkin.name,
+      lore: 'Монстр живет у мусорных контейнеров и сначала проявляется через камеры, отражения, шаги и исчезающих клиентов.',
     })}`;
 
     try {
@@ -703,6 +836,11 @@ export default function App() {
     } finally {
       setGeminiBusy(false);
     }
+  };
+
+  const askGemini = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await requestGemini(geminiPrompt);
   };
 
   const scare = (name: string) => {
@@ -769,6 +907,9 @@ export default function App() {
 
     const camera = new THREE.PerspectiveCamera(75, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 220);
     camera.position.set(0, 1.7, 14);
+    scene.add(camera);
+    const cashierView = makeCashierViewModel(cashierSkins.find((skin) => skin.id === equippedSkin) ?? defaultCashierSkin);
+    camera.add(cashierView);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
@@ -1136,6 +1277,7 @@ export default function App() {
       stockObjects,
       carts,
       fridges,
+      cashierView,
       loreNotes,
       bandits,
       phone,
@@ -1526,6 +1668,7 @@ export default function App() {
     if (!state) return;
     setPaused(false);
     setSettingsOpen(false);
+    setSkinsOpen(false);
     patchHud({
       phase: 'shift',
       message: 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
@@ -1570,6 +1713,7 @@ export default function App() {
     saveGame({
       event: 'shift_started',
       phase: 'shift',
+      cashierSkin: equippedSkin,
       startedAt: new Date().toISOString(),
     });
   };
@@ -1822,8 +1966,10 @@ export default function App() {
           <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
           <div className="guest-login-actions">
             <button type="button" onClick={startGame}>Играть как гость</button>
+            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Скины кассира</button>
             <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Войти</button>
             <span>{session?.user.email ? `Вошел: ${session.user.email}` : 'Гость: прогресс хранится на этом устройстве'}</span>
+            <span>Надето: {selectedSkin.name}</span>
           </div>
         </section>
       )}
@@ -1831,6 +1977,7 @@ export default function App() {
       <div className="account-panel">
         <span>{session?.user.email ?? 'Guest'}</span>
         {!session && <button type="button" onClick={() => setAuthOpen(true)}>Login</button>}
+        <button type="button" onClick={() => setSkinsOpen(true)}>Skins</button>
         <button type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
         <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
       </div>
@@ -1848,8 +1995,39 @@ export default function App() {
           <h2>Shift suspended</h2>
           <div className="menu-actions">
             <button type="button" onClick={() => setPaused(false)}>Resume</button>
+            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Cashier skins</button>
             <button type="button" className="ghost" onClick={() => setSettingsOpen(true)}>Settings</button>
             <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu' })}>Main menu</button>
+          </div>
+        </section>
+      )}
+
+      {skinsOpen && (
+        <section className="skins-screen">
+          <div className="skins-panel">
+            <span className="menu-kicker">Locker room</span>
+            <h2>Скины кассира</h2>
+            <p>Скин меняет руки игрока в первом лице: рукава, перчатки и бейдж. Сейчас надето: <b>{selectedSkin.name}</b>.</p>
+            <div className="skin-grid">
+              {cashierSkins.map((skin) => (
+                <article key={skin.id} className={skin.id === equippedSkin ? 'active' : ''}>
+                  <div className="skin-preview">
+                    <i style={{ background: `#${skin.sleeve.toString(16).padStart(6, '0')}` }} />
+                    <i style={{ background: `#${skin.glove.toString(16).padStart(6, '0')}` }} />
+                    <i style={{ background: `#${skin.badge.toString(16).padStart(6, '0')}` }} />
+                  </div>
+                  <h3>{skin.name}</h3>
+                  <span>{skin.description}</span>
+                  <button type="button" onClick={() => equipSkin(skin.id)}>
+                    {skin.id === equippedSkin ? 'Надето' : 'Надеть'}
+                  </button>
+                </article>
+              ))}
+            </div>
+            <div className="menu-actions">
+              <button type="button" className="ghost" onClick={removeSkin}>Снять скин</button>
+              <button type="button" onClick={() => setSkinsOpen(false)}>Закрыть</button>
+            </div>
           </div>
         </section>
       )}
@@ -1913,17 +2091,33 @@ export default function App() {
 
       {geminiOpen && (
         <section className="gemini-panel">
-          <b>Gemini Help</b>
+          <b>Gemini по Шестёрочка Horror</b>
           <form onSubmit={askGemini}>
             <textarea
-              placeholder="Ask how to survive, where to go, or what the next task is..."
+              placeholder="Спроси: что делать дальше, где мусор, как сбежать от монстра..."
               value={geminiPrompt}
               onChange={(e) => setGeminiPrompt(e.target.value)}
             />
             <button type="submit" disabled={geminiBusy}>
-              {geminiBusy ? 'Thinking...' : 'Ask'}
+              {geminiBusy ? 'Думаю...' : 'Спросить'}
             </button>
           </form>
+          <div className="gemini-quick">
+            {['Что делать дальше?', 'Как не умереть на улице?', 'Где искать мусор?', 'Как работают клиенты?'].map((question) => (
+              <button
+                key={question}
+                type="button"
+                className="ghost"
+                disabled={geminiBusy}
+                onClick={() => {
+                  setGeminiPrompt(question);
+                  requestGemini(question);
+                }}
+              >
+                {question}
+              </button>
+            ))}
+          </div>
           {geminiAnswer && <p>{geminiAnswer}</p>}
         </section>
       )}
