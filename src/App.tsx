@@ -524,7 +524,12 @@ function makeParkedCar(pos: [number, number, number], color: number) {
 
 function makeFridge(pos: [number, number, number]): FridgeUnit {
   const group = new THREE.Group();
-  const frame = box(2.3, 3.1, 0.45, 0x22272d, [0, 1.55, 0]);
+  const frame = box(2.45, 3.18, 0.55, 0x1c2228, [0, 1.59, 0]);
+  const inner = box(2.05, 2.62, 0.08, 0xd7f6ff, [0, 1.55, -0.33]);
+  inner.userData.isFridgeGlow = true;
+  const sideL = box(0.08, 2.82, 0.58, 0x303941, [-1.18, 1.55, -0.12]);
+  const sideR = box(0.08, 2.82, 0.58, 0x303941, [1.18, 1.55, -0.12]);
+  const handle = box(0.07, 1.5, 0.07, 0xdbe5ea, [0.86, 1.62, -0.34]);
   const glass = new THREE.Mesh(
     new THREE.BoxGeometry(1.85, 2.55, 0.05),
     new THREE.MeshPhysicalMaterial({
@@ -540,17 +545,30 @@ function makeFridge(pos: [number, number, number]): FridgeUnit {
   );
   glass.position.set(0, 1.58, -0.26);
   glass.userData.closedZ = -0.26;
-  glass.userData.openZ = -0.9;
-  const glow = new THREE.PointLight(0xbdeeff, 0.75, 4);
+  glass.userData.openZ = -1.35;
+  const glow = new THREE.PointLight(0xbdeeff, 1.35, 5.2);
   glow.position.set(0, 1.8, -0.45);
-  group.add(frame, glass, glow);
-  for (let i = 0; i < 8; i += 1) {
-    const item = makeProduct(productNames[i % productNames.length], [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8f4ff][i % 4]);
-    item.position.set(-0.65 + (i % 4) * 0.43, 0.85 + Math.floor(i / 4) * 0.9, -0.36);
-    item.scale.setScalar(0.72);
-    group.add(item);
+  group.add(frame, inner, sideL, sideR, glass, handle, glow);
+  [0.7, 1.32, 1.94, 2.56].forEach((y) => {
+    const shelf = box(2.02, 0.045, 0.42, 0xc9d1d6, [0, y, -0.3]);
+    group.add(shelf);
+  });
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 5; col += 1) {
+      const i = row * 5 + col;
+      const item = makeProduct(productNames[i % productNames.length], [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8f4ff, 0xffffff][i % 5]);
+      item.position.set(-0.78 + col * 0.39, 0.58 + row * 0.62, -0.42);
+      item.scale.setScalar(0.56);
+      group.add(item);
+    }
   }
   group.position.set(...pos);
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
   return { mesh: group, door: glass, manualOpen: false };
 }
 
@@ -558,6 +576,7 @@ function makeMetalShelf(pos: [number, number, number]) {
   const group = new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({ color: 0x9ba3a7, metalness: 0.86, roughness: 0.24 });
   const darkMetal = new THREE.MeshStandardMaterial({ color: 0x4f575c, metalness: 0.9, roughness: 0.2 });
+  const priceMat = new THREE.MeshStandardMaterial({ color: 0xffd64d, roughness: 0.36, metalness: 0.02 });
 
   [-0.48, 0.48].forEach((x) => [-5.1, 5.1].forEach((z) => {
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.35, 0.12), darkMetal);
@@ -574,13 +593,30 @@ function makeMetalShelf(pos: [number, number, number]) {
       rail.position.set(x, y + 0.1, 0);
       group.add(rail);
     });
+    [-4.3, -2.15, 0, 2.15, 4.3].forEach((z, index) => {
+      const price = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.13, 0.025), priceMat);
+      price.position.set(-0.61, y + 0.19, z);
+      price.rotation.y = -0.04;
+      price.userData.priceTag = index;
+      group.add(price);
+    });
   });
 
   [-4, -2, 0, 2, 4].forEach((z) => {
     const cross = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.08, 0.08), darkMetal);
     cross.position.set(0, 2.35, z);
     group.add(cross);
+    const divider = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.7, 0.05), darkMetal);
+    divider.position.set(0, 1.32, z);
+    group.add(divider);
   });
+
+  const backPanel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 2.08, 10.5),
+    new THREE.MeshStandardMaterial({ color: 0x727a7f, metalness: 0.72, roughness: 0.32 }),
+  );
+  backPanel.position.set(0.56, 1.21, 0);
+  group.add(backPanel);
 
   group.position.set(...pos);
   group.traverse((child) => {
@@ -613,18 +649,28 @@ function makeMonster() {
   mouth.position.set(0, 3.16, -0.61);
   mouth.scale.set(1.45, 0.42, 0.34);
   group.add(mouth);
+  const lowerJaw = new THREE.Mesh(
+    new THREE.BoxGeometry(0.88, 0.12, 0.34),
+    new THREE.MeshStandardMaterial({ color: 0x26070a, roughness: 0.7, emissive: 0x120002 }),
+  );
+  lowerJaw.position.set(0, 2.88, -0.64);
+  lowerJaw.rotation.x = -0.2;
+  group.add(lowerJaw);
+  const innerGlow = new THREE.PointLight(0xff1935, 1.6, 3.5);
+  innerGlow.position.set(0, 3.05, -0.72);
+  group.add(innerGlow);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffe083 });
   [-0.23, 0.23].forEach((x) => {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), eyeMat);
     eye.position.set(x, 3.42, -0.56);
     group.add(eye);
   });
-  for (let i = 0; i < 15; i += 1) {
+  for (let i = 0; i < 24; i += 1) {
     const tooth = new THREE.Mesh(
-      new THREE.ConeGeometry(0.055, 0.44, 10),
+      new THREE.ConeGeometry(i % 3 === 0 ? 0.07 : 0.052, i % 3 === 0 ? 0.62 : 0.44, 10),
       new THREE.MeshStandardMaterial({ color: 0xe9dfc8, roughness: 0.34 }),
     );
-    tooth.position.set(-0.47 + i * 0.067, 3.03 + (i % 2) * 0.23, -0.72);
+    tooth.position.set(-0.58 + i * 0.05, 2.96 + (i % 2) * 0.34, -0.72);
     tooth.rotation.x = i % 2 ? 0 : Math.PI;
     group.add(tooth);
   }
@@ -648,13 +694,26 @@ function makeMonster() {
     arm.position.set(side * 0.95, 2.1, -0.05);
     arm.rotation.z = side * 0.7;
     group.add(arm);
-    const claw = new THREE.Mesh(
-      new THREE.ConeGeometry(0.18, 0.55, 12),
-      new THREE.MeshStandardMaterial({ color: 0xd8cfb9, roughness: 0.2 }),
+    for (let finger = 0; finger < 4; finger += 1) {
+      const claw = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08, 0.62 + finger * 0.06, 12),
+        new THREE.MeshStandardMaterial({ color: 0xd8cfb9, roughness: 0.2 }),
+      );
+      claw.position.set(side * (1.42 + finger * 0.07), 1.24 - finger * 0.035, -0.18 + finger * 0.08);
+      claw.rotation.z = -side * (0.75 + finger * 0.08);
+      claw.rotation.x = 0.35;
+      group.add(claw);
+    }
+  });
+  [-1, 1].forEach((side) => {
+    const wing = new THREE.Mesh(
+      new THREE.ConeGeometry(0.24, 1.6, 5),
+      new THREE.MeshStandardMaterial({ color: 0x19080a, roughness: 0.82, transparent: true, opacity: 0.82 }),
     );
-    claw.position.set(side * 1.55, 1.35, -0.12);
-    claw.rotation.z = -side * 0.8;
-    group.add(claw);
+    wing.position.set(side * 0.78, 2.45, 0.62);
+    wing.rotation.set(1.15, 0, side * 0.52);
+    wing.scale.set(0.65, 1.2, 1);
+    group.add(wing);
   });
   const glow = new THREE.PointLight(0xff273f, 2.2, 8);
   glow.position.set(0, 2.8, 0);
@@ -1232,9 +1291,9 @@ export default function App() {
       traces.push(trace);
     }
 
-    const customers: CustomerAi[] = ['Аружан', 'Марат', 'Старик', 'Клиент 05:12', 'Охранник'].map((_name, index) => {
-      const customerMesh = makeCustomer([0x2d79c7, 0x9234a8, 0x59733c, 0x111111, 0x6b1f28][index], index);
-      customerMesh.position.set(-15 + index * 2.4, 0, -12);
+    const customers: CustomerAi[] = ['Аружан', 'Марат', 'Старик', 'Клиент 05:12', 'Охранник', 'Мама с пакетом', 'Ночной покупатель', 'Клиент без лица'].map((_name, index) => {
+      const customerMesh = makeCustomer([0x2d79c7, 0x9234a8, 0x59733c, 0x111111, 0x6b1f28, 0xd8a928, 0x335a72, 0x0c0c0d][index], index);
+      customerMesh.position.set(-15 + (index % 4) * 2.4, 0, -12 + Math.floor(index / 4) * 2.1);
       customerMesh.visible = false;
       customerMesh.userData.initialPosition = customerMesh.position.clone();
       scene.add(customerMesh);
@@ -1243,7 +1302,7 @@ export default function App() {
         stage: 'waiting',
         target: new THREE.Vector3(-10 + index * 4, 0, -5 + (index % 2) * 8),
         item: productNames[index % productNames.length],
-        weird: index >= 3,
+        weird: index >= 3 && index % 2 === 1,
         mood: 'calm',
         patience: 12 + index * 2,
         leaveTime: 0,
@@ -1437,6 +1496,9 @@ export default function App() {
         const shouldOpen = fridge.manualOpen || (Math.abs(localPlayer.x) < 1.6 && Math.abs(localPlayer.z) < 2.1);
         const targetZ = shouldOpen ? fridge.door.userData.openZ : fridge.door.userData.closedZ;
         fridge.door.position.z += (targetZ - fridge.door.position.z) * Math.min(1, delta * 6);
+        fridge.mesh.traverse((child) => {
+          if (child instanceof THREE.PointLight) child.intensity += ((shouldOpen ? 2.1 : 1.05) - child.intensity) * Math.min(1, delta * 5);
+        });
       });
 
       const doorShouldOpen =
@@ -1678,6 +1740,32 @@ export default function App() {
       if (Math.random() < delta * 0.006 && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
         patchHud({ message: 'На секунду в стекле холодильника появилось лицо.' });
         scare('screamer-mask');
+      }
+
+      if (
+        Math.random() < delta * 0.012 &&
+        current.phase === 'shift' &&
+        !current.screamer &&
+        state.customers.some((customer) => customer.weird && customer.mesh.visible && customer.mesh.position.distanceTo(state.camera.position) < 5)
+      ) {
+        patchHud({
+          fear: clamp(current.fear + 14, 0, 100),
+          message: 'Странный клиент оказался слишком близко. Ты слышишь, как он шепчет цену товара твоим голосом.',
+        });
+        scare('screamer-longneck');
+      }
+
+      if (
+        Math.random() < delta * 0.01 &&
+        current.phase === 'shift' &&
+        !current.screamer &&
+        state.monster.mood === 'watching'
+      ) {
+        patchHud({
+          fear: clamp(current.fear + 10, 0, 100),
+          message: 'На мониторах охраны моргнула мусорка, хотя ты стоишь в торговом зале.',
+        });
+        scare('screamer-trash3d');
       }
 
       renderer.render(scene, camera);
@@ -2222,7 +2310,7 @@ export default function App() {
       {settings.showHud && <aside className="quest-log">
         <b>Квесты</b>
         <span className={hud.tasks.phone ? 'done' : ''}>E: ответить на телефон</span>
-        <span className={hud.tasks.cashier ? 'done' : ''}>Обслужить клиентов: {hud.served}/5</span>
+        <span className={hud.tasks.cashier ? 'done' : ''}>Обслужить клиентов: {hud.served}/8</span>
         <span className={hud.tasks.stock ? 'done' : ''}>Пополнить полки: {hud.stocked}/18</span>
         <span className={hud.tasks.trash ? 'done' : ''}>Собрать мусор: {hud.trash}/3</span>
         <span className={hud.tasks.cameras ? 'done' : ''}>Посмотреть камеры</span>
