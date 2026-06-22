@@ -130,6 +130,16 @@ const getSavedSkin = (): CashierSkinId => {
   return cashierSkins.some((skin) => skin.id === saved) ? saved! : 'uniform';
 };
 
+const taskLabels: Record<TaskKey, string> = {
+  phone: 'ответь на телефон охраны',
+  cashier: 'обслужи клиентов на кассе',
+  stock: 'пополни пустые полки',
+  trash: 'собери мусорные пакеты',
+  cameras: 'проверь камеры в комнате охраны',
+  bandits: 'отбейся от бандитов',
+  outside: 'вынеси мусор наружу',
+};
+
 const customerWaypoints = [
   new THREE.Vector3(-15, 0, -13),
   new THREE.Vector3(-12, 0, 8),
@@ -786,6 +796,40 @@ export default function App() {
 
   const selectedSkin = cashierSkins.find((skin) => skin.id === equippedSkin) ?? defaultCashierSkin;
 
+  const getLocalGameHint = (question: string) => {
+    const current = hudRef.current;
+    const state = engine.current;
+    const lower = question.toLowerCase();
+    const nextTask = (Object.keys(current.tasks) as TaskKey[]).find((task) => !current.tasks[task]);
+    const angryCustomer = state?.customers.find((customer) => customer.mood === 'angry' || customer.mood === 'impatient');
+
+    if (lower.includes('монстр')) {
+      if (state?.monster.mood === 'hunting') return 'Монстр уже охотится. Не стой у контейнеров: беги к автоматическим дверям или к дальнему выходу на парковке, фонарик держи включенным короткими вспышками.';
+      if (state?.monster.mood === 'stalking') return 'Монстр рядом, но еще не ускорился. Отходи от мусорки, не смотри долго в одну точку и держи путь обратно к магазину.';
+      if (state?.monster.mood === 'watching') return 'Монстр пока наблюдает через камеры и отражения. Проверь комнату охраны, потом не задерживайся у холодильников.';
+      return 'Пока монстр скрыт. Сначала делай смену: телефон, касса, полки, камеры, мусор. Он проявится сильнее ближе к улице.';
+    }
+
+    if (lower.includes('клиент') || lower.includes('злит')) {
+      if (angryCustomer) return `Клиент с товаром "${angryCustomer.item}" теряет терпение. Подойди к кассе и нажми E, иначе он уйдет и поднимет страх.`;
+      return 'Клиенты ходят к полкам, берут 3D-товары и идут к кассе. Если клиент стоит у кассы слишком долго, он злится и уходит через двери.';
+    }
+
+    if (lower.includes('мусор')) {
+      if (current.phase === 'outside') return 'На улице не задерживайся возле контейнеров. Брось пакет в мусорку и сразу возвращайся к магазину или беги к зеленому выходу.';
+      return 'Мусорные пакеты лежат внутри магазина. Подойди к пакету, нажми E, потом неси его к автоматическим дверям и на улицу.';
+    }
+
+    if (lower.includes('улиц') || lower.includes('сбеж') || lower.includes('умер')) {
+      return current.outsideFinal
+        ? 'Финал начался: монстр вылезает из контейнера. Беги, не оборачивайся, держись фонарей и уходи к выходу или обратно к дверям магазина.'
+        : 'До финала можно вернуться в магазин: подойди к автоматическим дверям и нажми E. В финале придется бежать быстрее.';
+    }
+
+    if (nextTask) return `Следующая цель: ${taskLabels[nextTask]}. Если потерялся, ищи объект рядом и нажимай E.`;
+    return 'Все основные дела почти закрыты. Проверь, нет ли мусора в руках, затем выходи на улицу и готовься к погоне.';
+  };
+
   const equipSkin = (skinId: CashierSkinId) => {
     const skin = cashierSkins.find((item) => item.id === skinId) ?? defaultCashierSkin;
     setEquippedSkin(skin.id);
@@ -854,16 +898,16 @@ export default function App() {
 
     try {
       if (!supabase) {
-        setGeminiAnswer('Gemini needs Supabase settings first.');
+        setGeminiAnswer(getLocalGameHint(cleanQuestion));
         return;
       }
       const { data, error } = await supabase.functions.invoke('ai', {
         body: { prompt, system },
       });
-      const answer = error ? error.message : data?.text ?? 'No answer returned.';
+      const answer = error ? getLocalGameHint(cleanQuestion) : data?.text ?? getLocalGameHint(cleanQuestion);
       setGeminiAnswer(answer);
     } catch {
-      setGeminiAnswer('Gemini helper is not deployed yet. Deploy the Supabase function and set GEMINI_API_KEY.');
+      setGeminiAnswer(getLocalGameHint(cleanQuestion));
     } finally {
       setGeminiBusy(false);
     }
@@ -1601,40 +1645,14 @@ export default function App() {
               patchHud({ phase: 'dead', message: 'The monster caught you near the dumpsters.' });
               scare('screamer-trash3d');
             }
+            if (state.camera.position.distanceTo(state.helpExit.position) < 4) {
+              patchHud({ phase: 'escaped', message: 'Ты добрался до выхода с парковки и вызвал помощь.' });
+            }
           } else {
             state.monster.mesh.visible = false;
             state.monster.active = false;
             state.monster.mood = 'hidden';
           }
-        }
-      }
-
-      if (false && current.phase === 'outside' && state) {
-        state.monster.mesh.visible = true;
-        state.monster.active = true;
-        state.monster.mood = current.outsideFinal ? 'hunting' : 'watching';
-        const emergeSpeed = current.outsideFinal ? 0.28 : 0.08;
-        const chaseSpeed = current.outsideFinal ? 3.15 : 1.35;
-        state.monster.emerging = clamp(state.monster.emerging + delta * emergeSpeed, 0, 1);
-        state.monster.mesh.position.y = -1.5 + state.monster.emerging * 1.6;
-        state.monster.mesh.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
-        const toPlayer = state.camera.position.clone().sub(state.monster.mesh.position);
-        toPlayer.y = 0;
-        if (state.monster.emerging >= 0.85 && toPlayer.length() > 1.8) {
-          state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * chaseSpeed));
-        }
-        if (!current.outsideFinal && state.monster.emerging > 0.45 && Math.random() < delta * 0.18) {
-          patchHud({
-            fear: clamp(current.fear + 2, 0, 100),
-            message: 'Снаружи слишком тихо. За контейнерами кто-то повторяет твои шаги.',
-          });
-        }
-        if (state.monster.mesh.position.distanceTo(state.camera.position) < 2.5) {
-          patchHud({ phase: 'dead', message: 'Монстр догнал тебя у контейнеров.' });
-          scare('screamer-trash3d');
-        }
-        if (state.camera.position.distanceTo(state.helpExit.position) < 4) {
-          patchHud({ phase: 'escaped', message: 'Ты добрался до выхода и вызвал помощь.' });
         }
       }
 
@@ -1821,18 +1839,20 @@ export default function App() {
       return;
     }
 
-    if (false && state && current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
+    if (current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
       state.camera.position.set(16.3, 1.7, 12);
       state.outsideObjects.forEach((object) => { object.visible = true; });
       state.outsideLights.forEach((light) => { light.intensity = 0.35; });
       state.traces.forEach((trace) => { trace.visible = false; });
       state.monster.mesh.visible = false;
+      state.monster.active = false;
+      state.monster.mood = 'hidden';
       state.monster.emerging = 0;
       state.scene.fog = new THREE.FogExp2(0x050607, 0.026);
       patchHud({
         phase: 'shift',
         outsideFinal: false,
-        message: 'Ты вернулся в магазин. Двери закрылись слишком медленно, будто их держали снаружи.',
+        message: 'Ты вернулся в магазин через автоматические двери. Снаружи что-то осталось возле парковки.',
       });
       return;
     }
