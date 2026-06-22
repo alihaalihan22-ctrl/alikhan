@@ -569,6 +569,57 @@ function makeStoreSign(pos: [number, number, number]) {
   return group;
 }
 
+function makePuddle(pos: [number, number, number], scale: [number, number, number]) {
+  const puddle = new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1, 0.018, 40),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x0a1216,
+      roughness: 0.04,
+      metalness: 0,
+      clearcoat: 1,
+      transparent: true,
+      opacity: 0.62,
+    }),
+  );
+  puddle.position.set(...pos);
+  puddle.scale.set(...scale);
+  puddle.receiveShadow = true;
+  return puddle;
+}
+
+function makeFenceSection(pos: [number, number, number], width = 6) {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x5a6469, metalness: 0.78, roughness: 0.25 });
+  const top = new THREE.Mesh(new THREE.BoxGeometry(width, 0.06, 0.08), metal);
+  top.position.y = 1.45;
+  const bottom = top.clone();
+  bottom.position.y = 0.35;
+  group.add(top, bottom);
+  for (let x = -width / 2; x <= width / 2; x += 0.55) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.6, 0.06), metal);
+    bar.position.set(x, 0.8, 0);
+    group.add(bar);
+  }
+  group.position.set(...pos);
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeExitSign(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const panel = box(3.2, 0.9, 0.12, 0x184f34, [0, 0, 0]);
+  const glow = new THREE.PointLight(0x50ff99, 1.15, 8);
+  glow.position.set(0, 0, -1.2);
+  group.add(panel, glow);
+  group.position.set(...pos);
+  return group;
+}
+
 function makeFridge(pos: [number, number, number]): FridgeUnit {
   const group = new THREE.Group();
   const frame = box(2.45, 3.18, 0.55, 0x1c2228, [0, 1.59, 0]);
@@ -1465,6 +1516,8 @@ export default function App() {
       makeTrashBag([2.2, 0, 39.4]),
       makeTrashBag([7.6, 0, 36.9]),
       makeTrashBag([5.9, 0, 41.1]),
+      makeTrashBag([-7.2, 0, 44.5]),
+      makeTrashBag([13.8, 0, 47.5]),
     ];
     outsideTrash.forEach((bag) => {
       bag.visible = true;
@@ -1477,20 +1530,40 @@ export default function App() {
       scene.add(line);
       parkingLines.push(line);
     }
-    [makeParkedCar([-12, 0, 33], 0x23262c), makeParkedCar([-4, 0, 31], 0x611b22), makeParkedCar([12, 0, 35], 0x1d3347)].forEach((car) => {
+    [makeParkedCar([-12, 0, 33], 0x23262c), makeParkedCar([-4, 0, 31], 0x611b22), makeParkedCar([12, 0, 35], 0x1d3347), makeParkedCar([15, 0, 50], 0x0d0f12)].forEach((car) => {
       car.visible = true;
       scene.add(car);
       parkingLines.push(car);
     });
+    const outsideDetails: THREE.Object3D[] = [
+      makePuddle([-8.5, 0.015, 38], [2.6, 1, 1.15]),
+      makePuddle([3.5, 0.015, 48], [1.9, 1, 0.8]),
+      makePuddle([12.5, 0.015, 28], [1.4, 1, 0.65]),
+      makeFenceSection([-18.5, 0, 42], 18),
+      makeFenceSection([18.5, 0, 42], 18),
+      makeFenceSection([0, 0, 58.5], 30),
+      makeExitSign([0, 2.8, 47.82]),
+      box(1.4, 0.9, 1.2, 0x6e4728, [-14, 0.45, 45]),
+      box(1.2, 0.8, 1.2, 0x5b3a20, [-12.5, 0.4, 46.2]),
+      box(0.9, 0.7, 0.9, 0x4b301c, [9.5, 0.35, 45.5]),
+    ];
+    outsideDetails.forEach((object) => {
+      object.visible = true;
+      scene.add(object);
+      parkingLines.push(object);
+    });
+    outsideDetails.slice(3, 6).forEach((fence) => outsideColliders.push(new THREE.Box3().setFromObject(fence)));
     const lamp1 = new THREE.PointLight(0xffd37b, 0, 22);
     lamp1.position.set(-8, 6, 30);
     const lamp2 = new THREE.PointLight(0xffd37b, 0, 22);
     lamp2.position.set(10, 6, 52);
+    const lamp3 = new THREE.PointLight(0xb8d8ff, 0.22, 18);
+    lamp3.position.set(15, 4.2, 49);
     lamp1.intensity = 0.35;
     lamp2.intensity = 0.28;
-    scene.add(lamp1, lamp2);
+    scene.add(lamp1, lamp2, lamp3);
     const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, storeSign, ...outsideTrash, ...parkingLines];
-    const outsideLights = [lamp1, lamp2];
+    const outsideLights = [lamp1, lamp2, lamp3];
 
     const keys: Record<string, boolean> = {};
     const controlKeys = new Set(['w', 'a', 's', 'd', 'shift', 'e', 'q', 'escape']);
@@ -1802,6 +1875,22 @@ export default function App() {
       if (current.tasks.cameras && current.served >= 3 && livingBandits === 0 && !current.tasks.bandits) completeTask('bandits');
 
       if (current.phase === 'outside') {
+        if (state.camera.position.y < 0.8 || Math.abs(state.camera.position.x) > 28 || state.camera.position.z > 64) {
+          state.camera.position.set(0, 1.7, 24);
+          patchHud({ message: 'Ты споткнулся у парковки и вернулся к дверям магазина.' });
+        }
+        if (Math.random() < delta * 0.08) {
+          state.outsideLights.forEach((light, index) => {
+            light.intensity = Math.max(0.08, light.intensity + (Math.random() - 0.5) * (index === 2 ? 0.5 : 0.32));
+          });
+        }
+        if (Math.random() < delta * 0.025 && !current.screamer) {
+          playImpactSound();
+          patchHud({
+            fear: clamp(current.fear + 5, 0, 100),
+            message: 'Снаружи по металлу ударили так громко, что задрожала вывеска 6ШЕСТЁРАЧКА.',
+          });
+        }
         if (state.camera.position.z < 18.5) {
           state.camera.position.set(16.25, 1.7, 12);
           state.scene.fog = new THREE.FogExp2(0x050607, 0.026);
@@ -1840,7 +1929,8 @@ export default function App() {
             const toPlayer = state.camera.position.clone().sub(state.monster.mesh.position);
             toPlayer.y = 0;
             if (state.monster.emerging >= 0.7 && toPlayer.length() > 1.8) {
-              state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * 3.35));
+              const chaseSpeed = state.camera.position.distanceTo(state.dumpster.position) < 9 ? 4.15 : 3.35;
+              state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * chaseSpeed));
             }
             if (state.monster.mesh.position.distanceTo(state.camera.position) < 2.5) {
               patchHud({ phase: 'dead', message: 'The monster caught you near the dumpsters.' });
