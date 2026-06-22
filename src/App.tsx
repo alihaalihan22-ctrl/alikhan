@@ -522,6 +522,53 @@ function makeParkedCar(pos: [number, number, number], color: number) {
   return group;
 }
 
+function makeStoreSign(pos: [number, number, number]) {
+  const group = new THREE.Group();
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#111418';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#bd1624';
+  ctx.fillRect(26, 26, canvas.width - 52, canvas.height - 52);
+  ctx.strokeStyle = '#f7f3e7';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(42, 42, canvas.width - 84, canvas.height - 84);
+  ctx.fillStyle = '#fff2d0';
+  ctx.font = '900 96px Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(255,255,255,.55)';
+  ctx.shadowBlur = 16;
+  ctx.fillText('6ШЕСТЁРАЧКА', canvas.width / 2, canvas.height / 2);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.Mesh(
+    new THREE.BoxGeometry(8.4, 1.55, 0.18),
+    new THREE.MeshStandardMaterial({
+      map: texture,
+      emissive: 0x8a111b,
+      emissiveIntensity: 0.8,
+      roughness: 0.22,
+      metalness: 0.08,
+    }),
+  );
+  const back = box(8.65, 1.75, 0.16, 0x1a1e22, [0, 0, 0.1]);
+  const glow = new THREE.PointLight(0xff2038, 1.5, 12);
+  glow.position.set(0, 0.2, -1.6);
+  group.add(back, face, glow);
+  group.position.set(...pos);
+  group.rotation.y = Math.PI;
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
 function makeFridge(pos: [number, number, number]): FridgeUnit {
   const group = new THREE.Group();
   const frame = box(2.45, 3.18, 0.55, 0x1c2228, [0, 1.59, 0]);
@@ -631,17 +678,22 @@ function makeMetalShelf(pos: [number, number, number]) {
 function makeMonster() {
   const group = new THREE.Group();
   const skin = new THREE.MeshStandardMaterial({
-    color: 0x4b171d,
-    emissive: 0x160006,
-    roughness: 0.42,
-    metalness: 0.04,
+    color: 0x2a0b0f,
+    emissive: 0x120004,
+    roughness: 0.78,
+    metalness: 0.02,
   });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.75, 2.4, 10, 24), skin);
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.68, 2.9, 10, 24), skin);
   body.position.y = 1.9;
+  body.scale.set(0.82, 1.12, 1.05);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.68, 24, 18), skin);
-  head.position.y = 3.35;
-  head.scale.set(1, 0.8, 1.15);
+  head.position.set(0.08, 3.55, -0.08);
+  head.scale.set(0.86, 1.12, 1.28);
   group.add(body, head);
+  const neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.85, 8, 14), skin);
+  neck.position.set(-0.05, 3.02, 0.02);
+  neck.rotation.z = -0.18;
+  group.add(neck);
   const mouth = new THREE.Mesh(
     new THREE.SphereGeometry(0.34, 20, 12),
     new THREE.MeshStandardMaterial({ color: 0x050000, roughness: 0.95, emissive: 0x210004 }),
@@ -660,9 +712,9 @@ function makeMonster() {
   innerGlow.position.set(0, 3.05, -0.72);
   group.add(innerGlow);
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffe083 });
-  [-0.23, 0.23].forEach((x) => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 10), eyeMat);
-    eye.position.set(x, 3.42, -0.56);
+  [[-0.26, 3.62, -0.64], [0.2, 3.47, -0.68], [0.02, 3.82, -0.58], [0.36, 3.72, -0.46]].forEach(([x, y, z], index) => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(index === 2 ? 0.06 : 0.085, 12, 10), eyeMat);
+    eye.position.set(x, y, z);
     group.add(eye);
   });
   for (let i = 0; i < 24; i += 1) {
@@ -689,6 +741,16 @@ function makeMonster() {
     spine.rotation.x = Math.PI / 2;
     group.add(spine);
   }
+  for (let i = 0; i < 7; i += 1) {
+    const rib = new THREE.Mesh(
+      new THREE.TorusGeometry(0.48 - i * 0.025, 0.025, 6, 24, Math.PI * 1.18),
+      new THREE.MeshStandardMaterial({ color: 0xeadfca, roughness: 0.34 }),
+    );
+    rib.position.set(0, 2.52 - i * 0.22, -0.08);
+    rib.rotation.set(Math.PI / 2, 0, Math.PI * 0.08);
+    rib.scale.x = 1.25;
+    group.add(rib);
+  }
   [-1, 1].forEach((side) => {
     const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 1.8, 6, 10), skin);
     arm.position.set(side * 0.95, 2.1, -0.05);
@@ -705,6 +767,29 @@ function makeMonster() {
       group.add(claw);
     }
   });
+  for (let i = 0; i < 5; i += 1) {
+    const tentacle = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.06, 1.45 + i * 0.18, 5, 10),
+      skin,
+    );
+    tentacle.position.set(-0.45 + i * 0.23, 1.2 - i * 0.06, 0.62);
+    tentacle.rotation.set(0.85 + i * 0.12, 0.2 - i * 0.1, -0.45 + i * 0.22);
+    group.add(tentacle);
+  }
+  const wetShine = new THREE.Mesh(
+    new THREE.SphereGeometry(0.72, 16, 10),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x3b1118,
+      roughness: 0.18,
+      metalness: 0,
+      clearcoat: 1,
+      transparent: true,
+      opacity: 0.18,
+    }),
+  );
+  wetShine.position.set(0.02, 2.16, -0.05);
+  wetShine.scale.set(0.75, 1.6, 0.55);
+  group.add(wetShine);
   [-1, 1].forEach((side) => {
     const wing = new THREE.Mesh(
       new THREE.ConeGeometry(0.24, 1.6, 5),
@@ -771,6 +856,8 @@ export default function App() {
     dumpster: THREE.Object3D;
     outsideObjects: THREE.Object3D[];
     outsideLights: THREE.PointLight[];
+    lastStepAt: number;
+    lastDropAt: number;
     audio?: AudioContext;
     wind?: OscillatorNode;
   } | null>(null);
@@ -1032,6 +1119,44 @@ export default function App() {
     growl.stop(ctx.currentTime + 0.75);
   };
 
+  const playFootstep = () => {
+    const ctx = engine.current?.audio;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(72, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(38, ctx.currentTime + 0.08);
+    gain.gain.value = 0.001;
+    gain.gain.exponentialRampToValueAtTime(0.055 * (settingsRef.current.volume / 100), ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.18);
+  };
+
+  const playImpactSound = () => {
+    const ctx = engine.current?.audio;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(260, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(52, ctx.currentTime + 0.24);
+    filter.type = 'lowpass';
+    filter.frequency.value = 760;
+    gain.gain.value = 0.001;
+    gain.gain.exponentialRampToValueAtTime(0.12 * (settingsRef.current.volume / 100), ctx.currentTime + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.42);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.44);
+  };
+
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -1146,6 +1271,8 @@ export default function App() {
     const helpExit = box(3.6, 3.3, 0.3, 0x2f6f47, [0, 1.65, 48]);
     helpExit.visible = false;
     scene.add(helpExit);
+    const storeSign = makeStoreSign([5.5, 4.2, 18.35]);
+    scene.add(storeSign);
 
     const phone = box(0.8, 0.35, 0.65, 0x111111, [-14, 1.1, 12]);
     scene.add(phone);
@@ -1362,7 +1489,7 @@ export default function App() {
     lamp1.intensity = 0.35;
     lamp2.intensity = 0.28;
     scene.add(lamp1, lamp2);
-    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, ...outsideTrash, ...parkingLines];
+    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, storeSign, ...outsideTrash, ...parkingLines];
     const outsideLights = [lamp1, lamp2];
 
     const keys: Record<string, boolean> = {};
@@ -1425,6 +1552,8 @@ export default function App() {
       dumpster,
       outsideObjects,
       outsideLights,
+      lastStepAt: 0,
+      lastDropAt: 0,
     };
 
     const animate = () => {
@@ -1442,6 +1571,7 @@ export default function App() {
       if (state.keys.d) move.x += 1;
       move.x += mobileMoveRef.current.x;
       move.z += mobileMoveRef.current.y;
+      const isMoving = move.lengthSq() > 0 && current.phase !== 'menu' && !isPaused;
       if (move.lengthSq() > 0 && current.phase !== 'menu' && !isPaused) {
         move.normalize();
         const speed = state.keys.shift ? 8.8 : 4.6;
@@ -1464,6 +1594,15 @@ export default function App() {
         const playerBox = new THREE.Box3().setFromCenterAndSize(state.camera.position, new THREE.Vector3(0.65, 1.7, 0.65));
         const activeColliders = current.phase === 'outside' ? state.outsideColliders : state.colliders;
         if (activeColliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
+      }
+
+      if (isMoving && state.audio) {
+        const now = state.clock.elapsedTime;
+        const interval = state.keys.shift ? 0.27 : 0.43;
+        if (now - state.lastStepAt > interval) {
+          state.lastStepAt = now;
+          playFootstep();
+        }
       }
 
       if (isPaused) {
@@ -1735,6 +1874,35 @@ export default function App() {
       if (Math.random() < delta * 0.05 && current.phase === 'shift') {
         storeLight.intensity = storeLight.intensity > 1 ? 0.95 : 2.4;
         patchHud({ message: 'Свет моргнул. За спиной прозвучали шаги.' });
+      }
+
+      if (
+        Math.random() < delta * 0.025 &&
+        current.phase === 'shift' &&
+        current.served >= 1 &&
+        state.clock.elapsedTime - state.lastDropAt > 10
+      ) {
+        const candidate = state.stockObjects.find((item) => item.visible && item.position.distanceTo(state.camera.position) < 8);
+        if (candidate) {
+          state.lastDropAt = state.clock.elapsedTime;
+          const dropped = candidate.clone(true);
+          dropped.position.copy(candidate.position);
+          dropped.position.y = 0.18;
+          dropped.rotation.set(Math.random() * 1.4, Math.random() * Math.PI, Math.random() * 1.4);
+          dropped.scale.multiplyScalar(0.92);
+          dropped.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          state.scene.add(dropped);
+          playImpactSound();
+          patchHud({
+            fear: clamp(current.fear + 8, 0, 100),
+            message: 'С полки сам сорвался товар и ударился об пол. Где-то рядом кто-то быстро отступил.',
+          });
+        }
       }
 
       if (Math.random() < delta * 0.006 && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
