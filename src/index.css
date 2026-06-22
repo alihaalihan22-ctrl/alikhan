@@ -174,6 +174,130 @@ button:hover {
   line-height: 1.45;
 }
 
+.skin-showcase {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  align-items: center;
+  gap: 18px;
+  min-height: 220px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 207, 108, .18), transparent 28%),
+    linear-gradient(135deg, rgba(255,255,255,.06), rgba(0,0,0,.34));
+  box-shadow: inset 0 0 40px rgba(0,0,0,.22);
+}
+
+.skin-showcase b {
+  display: block;
+  margin-bottom: 8px;
+  color: #ffe08c;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.skin-showcase span {
+  color: rgba(255, 247, 239, .76);
+  line-height: 1.45;
+}
+
+.cashier-model-preview {
+  position: relative;
+  width: 170px;
+  height: 205px;
+  margin: 0 auto;
+  filter: drop-shadow(0 24px 30px rgba(0,0,0,.48));
+}
+
+.cashier-model-preview i {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset -10px -12px 18px rgba(0,0,0,.2), inset 8px 8px 16px rgba(255,255,255,.08);
+}
+
+.preview-head {
+  left: 59px;
+  top: 22px;
+  width: 52px;
+  height: 58px;
+  border-radius: 48% 48% 44% 44%;
+}
+
+.preview-hair {
+  left: 52px;
+  top: 10px;
+  width: 66px;
+  height: 36px;
+  border-radius: 50% 50% 28% 28%;
+  background: #111;
+}
+
+.preview-body {
+  left: 48px;
+  top: 80px;
+  width: 74px;
+  height: 82px;
+  border-radius: 22px 22px 14px 14px;
+}
+
+.preview-badge {
+  left: 86px;
+  top: 100px;
+  width: 22px;
+  height: 13px;
+  border-radius: 3px;
+}
+
+.preview-arm {
+  top: 88px;
+  width: 24px;
+  height: 78px;
+  border-radius: 14px;
+}
+
+.preview-arm.left {
+  left: 28px;
+  transform: rotate(13deg);
+}
+
+.preview-arm.right {
+  right: 28px;
+  transform: rotate(-13deg);
+}
+
+.preview-glove {
+  top: 154px;
+  width: 28px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.preview-glove.left {
+  left: 20px;
+}
+
+.preview-glove.right {
+  right: 20px;
+}
+
+.preview-leg {
+  top: 154px;
+  width: 28px;
+  height: 45px;
+  border-radius: 10px;
+  background: #181a1d;
+}
+
+.preview-leg.left {
+  left: 58px;
+}
+
+.preview-leg.right {
+  right: 58px;
+}
+
 .skin-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -695,6 +819,11 @@ button:hover {
 
   .skin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .skin-showcase {
+    grid-template-columns: 1fr;
+    text-align: center;
   }
 
   .skin-grid article {

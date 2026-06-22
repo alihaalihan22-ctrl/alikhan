@@ -52,6 +52,8 @@ type CustomerAi = {
   stage: 'waiting' | 'browse' | 'checkout' | 'leave' | 'gone' | 'weird';
   target: THREE.Vector3;
   item: string;
+  mood: 'calm' | 'searching' | 'impatient' | 'angry' | 'afraid';
+  patience: number;
   weird: boolean;
   leaveTime: number;
   checkoutTime: number;
@@ -63,6 +65,7 @@ type MonsterAi = {
   mesh: THREE.Group;
   active: boolean;
   emerging: number;
+  mood: 'hidden' | 'watching' | 'stalking' | 'hunting';
 };
 
 const assetUrl = (name: string) => `${import.meta.env.BASE_URL}assets/${name}.png`;
@@ -350,6 +353,21 @@ function makeCustomer(color: number, index = 0) {
   bag.rotation.z = 0.16;
   group.add(bag);
   return group;
+}
+
+function giveCustomerProduct(customer: CustomerAi) {
+  if (customer.mesh.userData.carryingProduct) return;
+  const productColor = [0x1b4fff, 0xff7d19, 0x85d9ff, 0xf0d23c, 0xe7422f][Math.floor(Math.random() * 5)];
+  const carried = makeProduct(customer.item, productColor);
+  carried.name = 'carriedProduct';
+  carried.scale.setScalar(0.46);
+  carried.position.set(0.42, 0.86, -0.24);
+  carried.rotation.set(-0.22, 0.18, 0.08);
+  const priceTag = box(0.14, 0.08, 0.015, 0xf8f0c8, [0.1, 0.22, -0.15]);
+  priceTag.name = 'carriedProduct';
+  carried.add(priceTag);
+  customer.mesh.add(carried);
+  customer.mesh.userData.carryingProduct = true;
 }
 
 function makeBandit() {
@@ -818,6 +836,19 @@ export default function App() {
       fear: hudRef.current.fear,
       heldItem: hudRef.current.heldItem,
       selectedCashierSkin: selectedSkin.name,
+      customers: engine.current?.customers.map((customer) => ({
+        stage: customer.stage,
+        item: customer.item,
+        mood: customer.mood,
+        patience: Math.round(Math.max(0, customer.patience - customer.checkoutTime)),
+        carryingProduct: Boolean(customer.mesh.userData.carryingProduct),
+      })) ?? [],
+      monster: engine.current ? {
+        mood: engine.current.monster.mood,
+        active: engine.current.monster.active,
+        emerging: Number(engine.current.monster.emerging.toFixed(2)),
+        visible: engine.current.monster.mesh.visible,
+      } : null,
       lore: 'Монстр живет у мусорных контейнеров и сначала проявляется через камеры, отражения, шаги и исчезающих клиентов.',
     })}`;
 
@@ -1169,6 +1200,8 @@ export default function App() {
         target: new THREE.Vector3(-10 + index * 4, 0, -5 + (index % 2) * 8),
         item: productNames[index % productNames.length],
         weird: index >= 3,
+        mood: 'calm',
+        patience: 12 + index * 2,
         leaveTime: 0,
         checkoutTime: 0,
         angry: false,
@@ -1267,7 +1300,7 @@ export default function App() {
       clock,
       keys,
       customers,
-      monster: { mesh: monster, active: false, emerging: 0 },
+      monster: { mesh: monster, active: false, emerging: 0, mood: 'hidden' },
       scareMesh,
       flashlight,
       traces,
@@ -1394,6 +1427,7 @@ export default function App() {
         state.camera.position.set(0, 1.7, 24);
         state.monster.mesh.visible = false;
         state.monster.active = false;
+        state.monster.mood = 'hidden';
         state.monster.mesh.position.set(5, -1.5, 38);
         state.monster.emerging = 0;
         state.traces.forEach((trace) => { trace.visible = true; });
@@ -1413,6 +1447,7 @@ export default function App() {
           customer.leaveTime += delta;
           if (customer.leaveTime < customer.spawnAt) return;
           customer.stage = 'browse';
+          customer.mood = customer.weird ? 'afraid' : 'searching';
           customer.mesh.visible = true;
           customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
           customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
@@ -1429,8 +1464,12 @@ export default function App() {
         }
         if (customer.stage === 'checkout') {
           customer.checkoutTime += delta;
-          if (!customer.angry && customer.checkoutTime > 13) {
+          if (customer.checkoutTime > customer.patience * 0.55 && customer.mood !== 'angry') {
+            customer.mood = 'impatient';
+          }
+          if (!customer.angry && customer.checkoutTime > customer.patience) {
             customer.angry = true;
+            customer.mood = 'angry';
             customer.stage = 'leave';
             customer.leaveTime = 0;
             customer.target.set(19.5, 0, 12);
@@ -1465,16 +1504,10 @@ export default function App() {
           customer.mesh.visible = false;
         } else if (customer.stage === 'browse') {
           customer.stage = 'checkout';
+          customer.mood = customer.weird ? 'afraid' : 'calm';
           customer.checkoutTime = 0;
           customer.angry = false;
-          if (!customer.mesh.userData.carryingProduct) {
-            const carried = makeProduct(customer.item, 0xf0d23c);
-            carried.name = 'carriedProduct';
-            carried.scale.setScalar(0.42);
-            carried.position.set(0.42, 0.78, -0.22);
-            customer.mesh.add(carried);
-            customer.mesh.userData.carryingProduct = true;
-          }
+          giveCustomerProduct(customer);
           customer.target.set(-3 + Math.random() * 2, 0, 10.2 + Math.random());
           if (customer.weird) {
             patchHud({ message: 'Клиент слишком долго смотрит в камеру. На лице нет моргания.' });
@@ -1542,6 +1575,7 @@ export default function App() {
           if (!current.outsideFinal && closeToDumpster) {
             state.monster.mesh.visible = true;
             state.monster.active = true;
+            state.monster.mood = 'stalking';
             state.monster.mesh.position.set(5, -1.5, 38);
             state.monster.emerging = 0;
             patchHud({
@@ -1554,6 +1588,7 @@ export default function App() {
           if (current.outsideFinal) {
             state.monster.mesh.visible = true;
             state.monster.active = true;
+            state.monster.mood = state.monster.emerging >= 0.7 ? 'hunting' : 'stalking';
             state.monster.emerging = clamp(state.monster.emerging + delta * 0.42, 0, 1);
             state.monster.mesh.position.y = -1.5 + state.monster.emerging * 1.75;
             state.monster.mesh.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
@@ -1569,6 +1604,7 @@ export default function App() {
           } else {
             state.monster.mesh.visible = false;
             state.monster.active = false;
+            state.monster.mood = 'hidden';
           }
         }
       }
@@ -1576,6 +1612,7 @@ export default function App() {
       if (false && current.phase === 'outside' && state) {
         state.monster.mesh.visible = true;
         state.monster.active = true;
+        state.monster.mood = current.outsideFinal ? 'hunting' : 'watching';
         const emergeSpeed = current.outsideFinal ? 0.28 : 0.08;
         const chaseSpeed = current.outsideFinal ? 3.15 : 1.35;
         state.monster.emerging = clamp(state.monster.emerging + delta * emergeSpeed, 0, 1);
@@ -1603,6 +1640,7 @@ export default function App() {
 
       if (current.phase === 'shift' && current.tasks.cameras && state.monster.emerging < 0.26) {
         state.monster.mesh.visible = true;
+        state.monster.mood = 'watching';
         state.monster.mesh.position.set(13.5, -0.9, -14.5);
         state.monster.mesh.rotation.y += delta * 0.25;
         state.monster.emerging += delta * 0.018;
@@ -1689,6 +1727,8 @@ export default function App() {
     state.trashObjects.forEach((item) => { item.visible = true; });
     state.customers.forEach((customer) => {
       customer.stage = 'waiting';
+      customer.mood = 'calm';
+      customer.patience = 12 + customer.spawnAt * 0.35;
       customer.leaveTime = 0;
       customer.checkoutTime = 0;
       customer.angry = false;
@@ -1707,6 +1747,8 @@ export default function App() {
     state.outsideLights.forEach((light) => { light.intensity = 0.35; });
     state.monster.mesh.visible = false;
     state.monster.emerging = 0;
+    state.monster.active = false;
+    state.monster.mood = 'hidden';
     state.renderer.domElement.focus();
     state.controls.lock();
     startAudio();
@@ -1867,7 +1909,10 @@ export default function App() {
       customer.leaveTime = 0;
       customer.checkoutTime = 0;
       customer.angry = false;
+      customer.mood = 'calm';
       customer.target.set(19.5, 0, 12);
+      customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
+      customer.mesh.userData.carryingProduct = false;
       const served = current.served + 1;
       patchHud({ served, message: `Пробит товар: ${customer.item}. Клиент уходит из магазина.` });
       if (served >= state.customers.length) completeTask('cashier');
@@ -1898,6 +1943,7 @@ export default function App() {
       });
       state.monster.mesh.visible = true;
       state.monster.active = true;
+      state.monster.mood = 'hunting';
       state.monster.mesh.position.set(5, -1.5, 38);
       state.monster.emerging = 0;
       scare('screamer-trash3d');
@@ -2007,6 +2053,24 @@ export default function App() {
           <div className="skins-panel">
             <span className="menu-kicker">Locker room</span>
             <h2>Скины кассира</h2>
+            <div className="skin-showcase" aria-hidden="true">
+              <div className="cashier-model-preview">
+                <i className="preview-head" style={{ background: `#${selectedSkin.skin.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-hair" />
+                <i className="preview-body" style={{ background: `#${selectedSkin.sleeve.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-badge" style={{ background: `#${selectedSkin.badge.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-arm left" style={{ background: `#${selectedSkin.sleeve.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-arm right" style={{ background: `#${selectedSkin.sleeve.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-glove left" style={{ background: `#${selectedSkin.glove.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-glove right" style={{ background: `#${selectedSkin.glove.toString(16).padStart(6, '0')}` }} />
+                <i className="preview-leg left" />
+                <i className="preview-leg right" />
+              </div>
+              <div>
+                <b>{selectedSkin.name}</b>
+                <span>{selectedSkin.description}</span>
+              </div>
+            </div>
             <p>Скин меняет руки игрока в первом лице: рукава, перчатки и бейдж. Сейчас надето: <b>{selectedSkin.name}</b>.</p>
             <div className="skin-grid">
               {cashierSkins.map((skin) => (
@@ -2103,7 +2167,7 @@ export default function App() {
             </button>
           </form>
           <div className="gemini-quick">
-            {['Что делать дальше?', 'Как не умереть на улице?', 'Где искать мусор?', 'Как работают клиенты?'].map((question) => (
+            {['Что делать дальше?', 'Как не умереть на улице?', 'Где искать мусор?', 'Как работают клиенты?', 'Почему клиент злится?', 'Что делает монстр?'].map((question) => (
               <button
                 key={question}
                 type="button"
