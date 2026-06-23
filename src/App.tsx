@@ -620,6 +620,43 @@ function makeExitSign(pos: [number, number, number]) {
   return group;
 }
 
+function makeRainField() {
+  const group = new THREE.Group();
+  const rainMat = new THREE.MeshBasicMaterial({ color: 0x9fc7d9, transparent: true, opacity: 0.34 });
+  for (let i = 0; i < 90; i += 1) {
+    const drop = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.75, 0.018), rainMat);
+    drop.position.set(-19 + Math.random() * 38, 1.2 + Math.random() * 5.2, 22 + Math.random() * 36);
+    drop.rotation.z = -0.22;
+    drop.userData.speed = 3.8 + Math.random() * 2.6;
+    group.add(drop);
+  }
+  return group;
+}
+
+function makeShadowFigure() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0x020202,
+    roughness: 0.96,
+    emissive: 0x050000,
+    transparent: true,
+    opacity: 0.88,
+  });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.6, 8, 12), mat);
+  body.position.y = 1.05;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10), mat);
+  head.position.y = 2.05;
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2038 }));
+  eye.position.set(0.06, 2.08, -0.2);
+  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 1.1, 5, 8), mat);
+  arm.position.set(-0.32, 1.1, -0.02);
+  arm.rotation.z = -0.35;
+  group.add(body, head, eye, arm);
+  group.visible = false;
+  group.userData.hideAt = 0;
+  return group;
+}
+
 function makeFridge(pos: [number, number, number]): FridgeUnit {
   const group = new THREE.Group();
   const frame = box(2.45, 3.18, 0.55, 0x1c2228, [0, 1.59, 0]);
@@ -907,6 +944,8 @@ export default function App() {
     dumpster: THREE.Object3D;
     outsideObjects: THREE.Object3D[];
     outsideLights: THREE.PointLight[];
+    rain: THREE.Group;
+    outsideShadow: THREE.Group;
     lastStepAt: number;
     lastDropAt: number;
     audio?: AudioContext;
@@ -1553,6 +1592,12 @@ export default function App() {
       parkingLines.push(object);
     });
     outsideDetails.slice(3, 6).forEach((fence) => outsideColliders.push(new THREE.Box3().setFromObject(fence)));
+    const rain = makeRainField();
+    rain.visible = true;
+    scene.add(rain);
+    const outsideShadow = makeShadowFigure();
+    outsideShadow.position.set(-15.5, 0, 46);
+    scene.add(outsideShadow);
     const lamp1 = new THREE.PointLight(0xffd37b, 0, 22);
     lamp1.position.set(-8, 6, 30);
     const lamp2 = new THREE.PointLight(0xffd37b, 0, 22);
@@ -1562,7 +1607,7 @@ export default function App() {
     lamp1.intensity = 0.35;
     lamp2.intensity = 0.28;
     scene.add(lamp1, lamp2, lamp3);
-    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, storeSign, ...outsideTrash, ...parkingLines];
+    const outsideObjects: THREE.Object3D[] = [outsideFloor, dumpster, dumpsterLid, storeSign, rain, ...outsideTrash, ...parkingLines];
     const outsideLights = [lamp1, lamp2, lamp3];
 
     const keys: Record<string, boolean> = {};
@@ -1625,6 +1670,8 @@ export default function App() {
       dumpster,
       outsideObjects,
       outsideLights,
+      rain,
+      outsideShadow,
       lastStepAt: 0,
       lastDropAt: 0,
     };
@@ -1879,6 +1926,35 @@ export default function App() {
           state.camera.position.set(0, 1.7, 24);
           patchHud({ message: 'Ты споткнулся у парковки и вернулся к дверям магазина.' });
         }
+        state.rain.children.forEach((drop) => {
+          drop.position.y -= Number(drop.userData.speed ?? 4) * delta;
+          drop.position.x -= delta * 0.45;
+          if (drop.position.y < 0.25) {
+            drop.position.y = 6.2;
+            drop.position.x = -19 + Math.random() * 38;
+            drop.position.z = 22 + Math.random() * 36;
+          }
+        });
+        if (state.outsideShadow.visible) {
+          state.outsideShadow.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
+          if (state.clock.elapsedTime > Number(state.outsideShadow.userData.hideAt ?? 0) || state.outsideShadow.position.distanceTo(state.camera.position) < 5) {
+            state.outsideShadow.visible = false;
+          }
+        } else if (Math.random() < delta * 0.018 && !current.screamer) {
+          const spots = [
+            new THREE.Vector3(-16.2, 0, 45.5),
+            new THREE.Vector3(16.2, 0, 44.5),
+            new THREE.Vector3(8.5, 0, 55),
+            new THREE.Vector3(-9.5, 0, 55),
+          ];
+          state.outsideShadow.position.copy(spots[Math.floor(Math.random() * spots.length)]);
+          state.outsideShadow.userData.hideAt = state.clock.elapsedTime + 2.3;
+          state.outsideShadow.visible = true;
+          patchHud({
+            fear: clamp(current.fear + 7, 0, 100),
+            message: 'У забора на секунду появился силуэт. Он стоял неподвижно, пока ты не моргнул.',
+          });
+        }
         if (Math.random() < delta * 0.08) {
           state.outsideLights.forEach((light, index) => {
             light.intensity = Math.max(0.08, light.intensity + (Math.random() - 0.5) * (index === 2 ? 0.5 : 0.32));
@@ -1897,6 +1973,7 @@ export default function App() {
           state.monster.mesh.visible = false;
           state.monster.active = false;
           state.monster.emerging = 0;
+          state.outsideShadow.visible = false;
           patchHud({
             phase: current.outsideFinal ? 'escaped' : 'shift',
             outsideFinal: false,
@@ -2376,6 +2453,7 @@ export default function App() {
         <section className="title-screen">
           <h1>Шестёрочка Horror</h1>
           <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
+          <p className="menu-atmosphere">Дождь на парковке. Холодные холодильники. Клиенты, которые забывают зачем пришли.</p>
           <div className="guest-login-actions">
             <button type="button" onClick={startGame}>Играть как гость</button>
             <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Скины кассира</button>
