@@ -36,6 +36,14 @@ type GameSettings = {
   mobileControls: boolean;
 };
 
+type GameReview = {
+  id: string;
+  name: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+};
+
 type CashierSkinId = 'uniform' | 'security' | 'raincoat' | 'night';
 
 type CashierSkin = {
@@ -133,6 +141,43 @@ const getSavedSkin = (): CashierSkinId => {
   return cashierSkins.some((skin) => skin.id === saved) ? saved! : 'uniform';
 };
 
+const defaultReviews: GameReview[] = [
+  {
+    id: 'default-1',
+    name: 'Ночной игрок',
+    rating: 5,
+    text: 'Атмосфера стала намного страшнее: свет моргает, клиенты смотрят странно, а улица реально напрягает.',
+    createdAt: '2026-06-23T00:00:00.000Z',
+  },
+  {
+    id: 'default-2',
+    name: 'Кассир 05:12',
+    rating: 4,
+    text: 'Круто, что можно обслуживать клиентов, пополнять полки и потом выходить к мусорке. Хочу еще больше звуков.',
+    createdAt: '2026-06-23T00:01:00.000Z',
+  },
+];
+
+const getSavedReviews = (): GameReview[] => {
+  try {
+    const saved = localStorage.getItem('shesterochka-reviews');
+    if (!saved) return defaultReviews;
+    const parsed = JSON.parse(saved) as GameReview[];
+    if (!Array.isArray(parsed)) return defaultReviews;
+    return parsed
+      .filter((review) => typeof review.text === 'string' && typeof review.name === 'string')
+      .map((review) => ({
+        id: String(review.id || crypto.randomUUID()),
+        name: String(review.name).slice(0, 32) || 'Игрок',
+        rating: clamp(Number(review.rating) || 5, 1, 5),
+        text: String(review.text).slice(0, 420),
+        createdAt: String(review.createdAt || new Date().toISOString()),
+      }));
+  } catch {
+    return defaultReviews;
+  }
+};
+
 const taskLabels: Record<TaskKey, string> = {
   phone: 'ответь на телефон охраны',
   cashier: 'обслужи клиентов на кассе',
@@ -177,6 +222,10 @@ function getInputKey(event: KeyboardEvent) {
     ArrowRight: 'd',
     KeyE: 'e',
     KeyQ: 'q',
+    KeyI: 'i',
+    KeyJ: 'j',
+    KeyK: 'k',
+    KeyL: 'l',
     ShiftLeft: 'shift',
     ShiftRight: 'shift',
     Escape: 'escape',
@@ -387,6 +436,22 @@ function makeCustomer(color: number, index = 0) {
   const bag = box(0.22, 0.32, 0.12, 0x6b4a2f, [0.46, 0.78, 0.06]);
   bag.rotation.z = 0.16;
   group.add(bag);
+  if (index >= 3 && index % 2 === 1) {
+    const mask = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.34, 0.035),
+      new THREE.MeshStandardMaterial({ color: 0xe8e1d4, roughness: 0.72, metalness: 0.02 }),
+    );
+    mask.position.set(0, 1.5, -0.255);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffcf6c });
+    [-0.07, 0.07].forEach((x) => {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), eyeMat);
+      eye.position.set(x, 1.56, -0.285);
+      group.add(eye);
+    });
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.018), new THREE.MeshBasicMaterial({ color: 0x050000 }));
+    mouth.position.set(0, 1.42, -0.292);
+    group.add(mask, mouth);
+  }
   return group;
 }
 
@@ -908,6 +973,30 @@ function makeMonster() {
     wing.scale.set(0.65, 1.2, 1);
     group.add(wing);
   });
+  [-1, 1].forEach((side) => {
+    const horn = new THREE.Mesh(
+      new THREE.ConeGeometry(0.12, 0.95, 10),
+      new THREE.MeshStandardMaterial({ color: 0xd9cfb8, roughness: 0.26, metalness: 0.04 }),
+    );
+    horn.position.set(side * 0.38, 4.05, -0.18);
+    horn.rotation.set(0.35, 0, side * -0.55);
+    group.add(horn);
+    const claw = new THREE.Mesh(
+      new THREE.ConeGeometry(0.09, 0.72, 10),
+      new THREE.MeshStandardMaterial({ color: 0xe8dfcf, roughness: 0.3 }),
+    );
+    claw.position.set(side * 0.96, 1.55, -0.62);
+    claw.rotation.set(1.35, 0, side * 0.32);
+    group.add(claw);
+  });
+  for (let i = 0; i < 10; i += 1) {
+    const blisterEye = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045 + (i % 3) * 0.012, 10, 8),
+      new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffcf6c : 0xff3448 }),
+    );
+    blisterEye.position.set(-0.34 + (i % 5) * 0.17, 2.2 + Math.floor(i / 5) * 0.46, -0.58 - (i % 2) * 0.08);
+    group.add(blisterEye);
+  }
   const glow = new THREE.PointLight(0xff273f, 2.2, 8);
   glow.position.set(0, 2.8, 0);
   group.add(glow);
@@ -920,6 +1009,8 @@ export default function App() {
   const [paused, setPaused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [skinsOpen, setSkinsOpen] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [coopMode, setCoopMode] = useState(false);
   const [equippedSkin, setEquippedSkin] = useState<CashierSkinId>(() => getSavedSkin());
   const [authOpen, setAuthOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
@@ -934,6 +1025,10 @@ export default function App() {
   const [geminiPrompt, setGeminiPrompt] = useState('');
   const [geminiAnswer, setGeminiAnswer] = useState('');
   const [geminiBusy, setGeminiBusy] = useState(false);
+  const [reviews, setReviews] = useState<GameReview[]>(() => getSavedReviews());
+  const [reviewName, setReviewName] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
   const engine = useRef<{
     renderer: THREE.WebGLRenderer;
     scene: THREE.Scene;
@@ -954,6 +1049,7 @@ export default function App() {
     carts: THREE.Object3D[];
     fridges: FridgeUnit[];
     cashierView: THREE.Group;
+    secondPlayer: THREE.Group;
     loreNotes: THREE.Object3D[];
     bandits: BanditAi[];
     phone: THREE.Object3D;
@@ -1024,6 +1120,10 @@ export default function App() {
   useEffect(() => {
     hudRef.current = hud;
   }, [hud]);
+
+  useEffect(() => {
+    localStorage.setItem('shesterochka-reviews', JSON.stringify(reviews));
+  }, [reviews]);
 
   useEffect(() => {
     settingsRef.current = settings;
@@ -1182,8 +1282,43 @@ export default function App() {
     await requestGemini(geminiPrompt);
   };
 
+  const addReview = (event: React.FormEvent) => {
+    event.preventDefault();
+    const cleanText = reviewText.trim();
+    const cleanName = reviewName.trim();
+    if (cleanText.length < 3) {
+      patchHud({ message: 'Напиши отзыв чуть подробнее, хотя бы пару слов.' });
+      return;
+    }
+    const review: GameReview = {
+      id: crypto.randomUUID(),
+      name: cleanName.slice(0, 32) || session?.user.email?.split('@')[0] || 'Игрок',
+      rating: clamp(reviewRating, 1, 5),
+      text: cleanText.slice(0, 420),
+      createdAt: new Date().toISOString(),
+    };
+    setReviews((current) => [review, ...current].slice(0, 30));
+    setReviewText('');
+    setReviewName('');
+    setReviewRating(5);
+    patchHud({ message: 'Отзыв сохранен. Спасибо, это поможет улучшить Шестёрочку Horror.' });
+  };
+
+  const getCustomerAiLine = (customer: CustomerAi) => {
+    if (customer.weird) {
+      const lines = [
+        `Клиент шепчет: "Я уже покупал ${customer.item} завтра."`,
+        `Клиент смотрит мимо тебя: "На камере за твоей спиной кто-то стоит."`,
+        `Клиент улыбается слишком широко: "${customer.item} пробей без чека."`,
+      ];
+      return lines[Math.floor(Math.random() * lines.length)];
+    }
+    if (customer.mood === 'impatient') return `Клиент нервно стучит по кассе: "Можно быстрее? Мне нужен ${customer.item}."`;
+    return `Клиент спокойно кладет на кассу: ${customer.item}.`;
+  };
+
   const scare = (name: string) => {
-    const screamerImage = name ? 'screamer-grin' : 'screamer-grin';
+    const screamerImage = name || 'screamer-grin';
     patchHud({ screamer: screamerImage, fear: clamp(hudRef.current.fear + 24, 0, 100) });
     const state = engine.current!;
     if (state) {
@@ -1635,6 +1770,12 @@ export default function App() {
       scene.add(bandit.mesh);
     });
 
+    const secondPlayer = makeHuman(0xa51520, 0xe0b08a, true);
+    secondPlayer.position.set(1.6, 0, 13.2);
+    secondPlayer.visible = false;
+    secondPlayer.userData.active = false;
+    scene.add(secondPlayer);
+
     const outsideColliders: THREE.Box3[] = [];
     const outsideFloor = box(42, 0.12, 70, 0x171a1d, [0, -0.06, 42]);
     outsideFloor.visible = true;
@@ -1707,7 +1848,7 @@ export default function App() {
     const outsideLights = [lamp1, lamp2, lamp3];
 
     const keys: Record<string, boolean> = {};
-    const controlKeys = new Set(['w', 'a', 's', 'd', 'shift', 'e', 'q', 'escape']);
+    const controlKeys = new Set(['w', 'a', 's', 'd', 'i', 'j', 'k', 'l', 'shift', 'e', 'q', 'escape']);
     const onKeyDown = (event: KeyboardEvent) => {
       const key = getInputKey(event);
       if (controlKeys.has(key)) event.preventDefault();
@@ -1784,6 +1925,7 @@ export default function App() {
       carts,
       fridges,
       cashierView,
+      secondPlayer,
       loreNotes,
       bandits,
       phone,
@@ -1844,6 +1986,31 @@ export default function App() {
         const playerBox = new THREE.Box3().setFromCenterAndSize(state.camera.position, new THREE.Vector3(0.65, 1.7, 0.65));
         const activeColliders = current.phase === 'outside' ? state.outsideColliders : state.colliders;
         if (activeColliders.some((collider) => collider.intersectsBox(playerBox))) state.camera.position.copy(old);
+      }
+
+      if (state.secondPlayer.userData.active && current.phase !== 'menu' && current.phase !== 'outside' && !isPaused) {
+        const partnerMove = new THREE.Vector3(
+          (state.keys.l ? 1 : 0) - (state.keys.j ? 1 : 0),
+          0,
+          (state.keys.k ? 1 : 0) - (state.keys.i ? 1 : 0),
+        );
+        if (partnerMove.lengthSq() > 0) {
+          partnerMove.normalize();
+          const oldPartnerPos = state.secondPlayer.position.clone();
+          state.secondPlayer.position.add(partnerMove.multiplyScalar(delta * 4.2));
+          state.secondPlayer.position.x = clamp(state.secondPlayer.position.x, -16.2, 16.5);
+          state.secondPlayer.position.z = clamp(state.secondPlayer.position.z, -15.2, 15.8);
+          state.secondPlayer.lookAt(
+            state.secondPlayer.position.x + partnerMove.x,
+            state.secondPlayer.position.y,
+            state.secondPlayer.position.z + partnerMove.z,
+          );
+          const partnerBox = new THREE.Box3().setFromCenterAndSize(
+            new THREE.Vector3(state.secondPlayer.position.x, 0.9, state.secondPlayer.position.z),
+            new THREE.Vector3(0.58, 1.8, 0.58),
+          );
+          if (state.colliders.some((collider) => collider.intersectsBox(partnerBox))) state.secondPlayer.position.copy(oldPartnerPos);
+        }
       }
 
       if (isMoving && state.audio) {
@@ -2082,6 +2249,10 @@ export default function App() {
           if (!bandit.active && bandit.health > 0) {
             bandit.active = true;
             bandit.mesh.visible = true;
+            if (!bandit.mesh.userData.announced) {
+              bandit.mesh.userData.announced = true;
+              patchHud({ message: 'У дальних полок появились бандиты. Подойди близко и нажимай E, чтобы отбиться.' });
+            }
           }
         });
       }
@@ -2090,11 +2261,16 @@ export default function App() {
       state.bandits.forEach((bandit) => {
         if (!bandit.active || bandit.health <= 0) return;
         livingBandits += 1;
-        const toPlayer = state.camera.position.clone().sub(bandit.mesh.position);
+        const partnerActive = Boolean(state.secondPlayer.userData.active) && state.secondPlayer.visible;
+        const targetPosition =
+          partnerActive && state.secondPlayer.position.distanceTo(bandit.mesh.position) < state.camera.position.distanceTo(bandit.mesh.position)
+            ? state.secondPlayer.position
+            : state.camera.position;
+        const toPlayer = targetPosition.clone().sub(bandit.mesh.position);
         toPlayer.y = 0;
         if (toPlayer.length() > 1.35) {
           bandit.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * 2.15));
-          bandit.mesh.lookAt(state.camera.position.x, 1.4, state.camera.position.z);
+          bandit.mesh.lookAt(targetPosition.x, 1.4, targetPosition.z);
         } else if (Math.random() < delta * 1.2) {
           patchHud({
             health: clamp(current.health - 8, 0, 100),
@@ -2329,15 +2505,17 @@ export default function App() {
     patchHud({ message: 'Пространственный шум включен: гул ламп, ветер и шорохи магазина.' });
   };
 
-  const startGame = () => {
+  const startGame = (coop = false) => {
     const state = engine.current;
     if (!state) return;
+    const localCoop = coop === true;
+    setCoopMode(localCoop);
     setPaused(false);
     setSettingsOpen(false);
     setSkinsOpen(false);
     patchHud({
       phase: 'shift',
-      message: 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
+      message: localCoop ? 'Вы пришли на ночную смену вдвоем. Первый игрок: WASD, второй кассир: I/J/K/L.' : 'Ты пришел на ночную смену. Ответь на телефон охраны у входа.',
       tasks: initialTasks,
       served: 0,
       stocked: 0,
@@ -2377,6 +2555,12 @@ export default function App() {
       item.userData.items = 0;
     });
     state.fridges.forEach((item) => { item.manualOpen = false; });
+    state.bandits.forEach((bandit) => {
+      bandit.active = false;
+      bandit.health = 3;
+      bandit.mesh.visible = false;
+      bandit.mesh.userData.announced = false;
+    });
     state.loreNotes.forEach((item) => { item.visible = true; });
     state.outsideObjects.forEach((object) => { object.visible = true; });
     state.outsideLights.forEach((light) => { light.intensity = 0.35; });
@@ -2384,6 +2568,9 @@ export default function App() {
     state.monster.emerging = 0;
     state.monster.active = false;
     state.monster.mood = 'hidden';
+    state.secondPlayer.visible = localCoop;
+    state.secondPlayer.userData.active = localCoop;
+    state.secondPlayer.position.set(1.6, 0, 13.2);
     state.lastWhisperAt = 0;
     state.lastBreathAt = 0;
     state.lastNightEventAt = 0;
@@ -2577,7 +2764,7 @@ export default function App() {
       customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
       customer.mesh.userData.carryingProduct = false;
       const served = current.served + 1;
-      patchHud({ served, message: `Пробит товар: ${customer.item}. Клиент уходит из магазина.` });
+      patchHud({ served, message: `${getCustomerAiLine(customer)} Пробит товар: ${customer.item}. Клиент уходит из магазина.` });
       if (served >= state.customers.length) completeTask('cashier');
       if (customer.weird) scare('screamer-longneck');
       return;
@@ -2595,7 +2782,9 @@ export default function App() {
         heldItemFromStock: false,
         message: `Полка пополнена товаром из коробки: ${current.heldItem}.`,
       });
-      if (stocked === 2 || stocked === 7 || stocked === 13) scare('screamer-grin');
+      if (stocked === 2) scare('screamer-grin');
+      if (stocked === 7) scare('screamer-longneck');
+      if (stocked === 13) scare('screamer-mask');
       if (stocked >= 18) completeTask('stock');
       return;
     }
@@ -2634,8 +2823,8 @@ export default function App() {
 
     const trash = state.trashObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.2);
     if (trash) {
-      if (current.heldItem) {
-        patchHud({ message: 'Your hands are full. Take the current item outside or put it into a cart first.' });
+      if (current.heldItem && current.heldItem !== 'Trash bag') {
+        patchHud({ message: 'Руки заняты. Сначала положи товар на полку, в корзину или тележку, потом собирай мусор.' });
         return;
       }
       trash.visible = false;
@@ -2644,7 +2833,7 @@ export default function App() {
         trash: count,
         heldItem: 'Trash bag',
         heldItemFromStock: false,
-        message: 'Ты поднял тяжелый мусорный пакет. Неси его наружу к контейнеру.',
+        message: count >= state.trashObjects.length ? 'Мусор собран в один тяжелый пакет. Теперь вынеси его к контейнеру на улице.' : `Мусор собран: ${count}/${state.trashObjects.length}. Найди остальные пакеты в магазине.`,
       });
       if (count === 1) scare('screamer-dust');
       if (count >= state.trashObjects.length) completeTask('trash');
@@ -2697,7 +2886,9 @@ export default function App() {
           <p>3D-хоррор от первого лица. Ночная смена, клиенты, камеры и монстр у мусорных контейнеров.</p>
           <p className="menu-atmosphere">Дождь на парковке. Холодные холодильники. Клиенты, которые забывают зачем пришли.</p>
           <div className="guest-login-actions">
-            <button type="button" onClick={startGame}>Играть как гость</button>
+            <button type="button" className="ghost" onClick={() => setReviewsOpen(true)}>Отзывы</button>
+            <button type="button" onClick={() => startGame(false)}>Играть одному</button>
+            <button type="button" className="ghost" onClick={() => startGame(true)}>Играть вдвоем</button>
             <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Скины кассира</button>
             <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Войти</button>
             <span>{session?.user.email ? `Вошел: ${session.user.email}` : 'Гость: прогресс хранится на этом устройстве'}</span>
@@ -2708,8 +2899,10 @@ export default function App() {
 
       <div className="account-panel">
         <span>{session?.user.email ?? 'Guest'}</span>
+        <span>{coopMode ? 'Co-op: I/J/K/L' : 'Solo'}</span>
         {!session && <button type="button" onClick={() => setAuthOpen(true)}>Login</button>}
         <button type="button" onClick={() => setSkinsOpen(true)}>Skins</button>
+        <button type="button" onClick={() => setReviewsOpen(true)}>Reviews</button>
         <button type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
         <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
       </div>
@@ -2719,6 +2912,63 @@ export default function App() {
           onClose={() => setAuthOpen(false)}
           onSuccess={() => setAuthOpen(false)}
         />
+      )}
+
+      {reviewsOpen && (
+        <section className="reviews-screen">
+          <div className="reviews-panel">
+            <span className="menu-kicker">Player feedback</span>
+            <h2>Отзывы об игре</h2>
+            <form className="review-form" onSubmit={addReview}>
+              <label>
+                Имя
+                <input
+                  type="text"
+                  maxLength={32}
+                  placeholder="Игрок"
+                  value={reviewName}
+                  onChange={(event) => setReviewName(event.target.value)}
+                />
+              </label>
+              <label>
+                Оценка
+                <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
+                  <option value={5}>5 - отлично</option>
+                  <option value={4}>4 - хорошо</option>
+                  <option value={3}>3 - нормально</option>
+                  <option value={2}>2 - надо улучшить</option>
+                  <option value={1}>1 - плохо</option>
+                </select>
+              </label>
+              <label className="review-text-field">
+                Отзыв
+                <textarea
+                  maxLength={420}
+                  placeholder="Напиши, что улучшить: монстра, свет, клиентов, улицу, скримеры..."
+                  value={reviewText}
+                  onChange={(event) => setReviewText(event.target.value)}
+                />
+              </label>
+              <button type="submit">Оставить отзыв</button>
+            </form>
+            <div className="reviews-list">
+              {reviews.map((review) => (
+                <article key={review.id}>
+                  <div>
+                    <b>{review.name}</b>
+                    <span>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+                  </div>
+                  <p>{review.text}</p>
+                  <time>{new Date(review.createdAt).toLocaleDateString('ru-RU')}</time>
+                </article>
+              ))}
+            </div>
+            <div className="menu-actions">
+              <button type="button" className="ghost" onClick={() => setReviews(defaultReviews)}>Сбросить отзывы</button>
+              <button type="button" onClick={() => setReviewsOpen(false)}>Закрыть</button>
+            </div>
+          </div>
+        </section>
       )}
 
       {paused && hud.phase !== 'menu' && (
