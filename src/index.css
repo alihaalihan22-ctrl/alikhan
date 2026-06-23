@@ -1436,6 +1436,28 @@ button:disabled {
   padding: 18px;
 }
 
+.real-game-video {
+  display: grid;
+  gap: 12px;
+}
+
+.real-game-video video {
+  width: 100%;
+  max-height: min(58vh, 520px);
+  aspect-ratio: 16 / 9;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+  object-fit: cover;
+  background: #020304;
+  box-shadow: 0 24px 70px rgba(0,0,0,.55);
+}
+
+.real-game-video .demo-caption {
+  position: static;
+  justify-self: start;
+  color: rgba(255, 247, 239, .78);
+}
+
 .demo-screen {
   position: relative;
   height: min(56vh, 520px);

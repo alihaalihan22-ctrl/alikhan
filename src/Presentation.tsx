@@ -5,6 +5,7 @@ const getGameUrl = () => {
   url.search = '';
   url.hash = '';
   url.pathname = url.pathname.replace(/\/presentation\/?$/, '/');
+  if (!url.pathname.endsWith('/')) url.pathname += '/';
   return url.toString();
 };
 
@@ -20,8 +21,8 @@ const slides = [
   },
   {
     kicker: 'Slide 02',
-    title: 'Шестёрочка Horror',
-    text: 'Это реалистичный first-person horror про ночную смену кассира, где обычный супермаркет постепенно превращается в место охоты монстра.',
+    title: 'Шестерачка Horror',
+    text: 'Реалистичный first-person horror про ночную смену кассира, где обычный супермаркет постепенно превращается в место охоты монстра.',
     type: 'app',
   },
   {
@@ -33,13 +34,13 @@ const slides = [
   {
     kicker: 'Slide 04',
     title: 'Video Demo',
-    text: 'Короткая демонстрация игрового цикла: ответить на звонок, обслужить клиента, взять товар из коробки, пополнить полку и выйти на улицу.',
+    text: 'Короткое видео из игрового стиля: ночной магазин, полки, клиент, мигающий свет и появление монстра.',
     type: 'demo',
   },
   {
     kicker: 'Slide 05',
     title: 'Играй сейчас',
-    text: 'Зайди в Шестёрочка Horror и проверь, сможешь ли закончить ночную смену до того, как мусорка начнет дышать.',
+    text: 'Зайди в Шестерачка Horror и проверь, сможешь ли закончить ночную смену до того, как мусорка начнет дышать.',
     type: 'qr',
   },
 ] as const;
@@ -85,18 +86,17 @@ function ScreenshotGrid() {
 
 function DemoPlayer() {
   return (
-    <div className="demo-player">
-      <div className="demo-screen">
-        <i className="demo-aisle" />
-        <i className="demo-client" />
-        <i className="demo-box" />
-        <i className="demo-product" />
-        <i className="demo-monster" />
-        <span className="demo-caption">E: взять товар из коробки</span>
-      </div>
-      <div className="demo-timeline">
-        <i />
-      </div>
+    <div className="demo-player real-game-video">
+      <video
+        src={`${import.meta.env.BASE_URL}assets/game-demo.webm`}
+        controls
+        autoPlay
+        muted
+        loop
+        playsInline
+        poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
+      />
+      <span className="demo-caption">Видео с игровым видом: полки, клиент, свет и появление монстра.</span>
     </div>
   );
 }
@@ -157,7 +157,7 @@ export default function Presentation() {
           {slide.type === 'demo' && <DemoPlayer />}
           {slide.type === 'qr' && (
             <div className="qr-card">
-              <img src={qrUrl} alt="QR code на игру Шестёрочка Horror" />
+              <img src={qrUrl} alt="QR code на игру Шестерачка Horror" />
               <strong>{gameUrl}</strong>
             </div>
           )}
