@@ -981,6 +981,7 @@ export default function App() {
   const pausedRef = useRef(paused);
   const mobileMoveRef = useRef({ x: 0, y: 0 });
   const mobileLookRef = useRef({ active: false, lastX: 0, lastY: 0 });
+  const canvasLookRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
   const [hud, setHud] = useState<Hud>({
     phase: 'menu',
@@ -1733,6 +1734,34 @@ export default function App() {
       renderer.domElement.focus();
       controls.lock();
     });
+    const rotateCameraByDrag = (dx: number, dy: number) => {
+      if (controls.isLocked || pausedRef.current || hudRef.current.phase === 'menu') return;
+      const sensitivity = 0.0014 + settingsRef.current.sensitivity * 0.000035;
+      camera.rotation.order = 'YXZ';
+      camera.rotation.y -= dx * sensitivity;
+      camera.rotation.x = clamp(camera.rotation.x - dy * sensitivity, -1.35, 1.35);
+    };
+    const onCanvasPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0 || hudRef.current.phase === 'menu') return;
+      canvasLookRef.current = { active: true, lastX: event.clientX, lastY: event.clientY };
+      renderer.domElement.setPointerCapture(event.pointerId);
+    };
+    const onCanvasPointerMove = (event: PointerEvent) => {
+      if (!canvasLookRef.current.active) return;
+      const dx = event.clientX - canvasLookRef.current.lastX;
+      const dy = event.clientY - canvasLookRef.current.lastY;
+      canvasLookRef.current.lastX = event.clientX;
+      canvasLookRef.current.lastY = event.clientY;
+      rotateCameraByDrag(dx, dy);
+    };
+    const onCanvasPointerUp = (event: PointerEvent) => {
+      canvasLookRef.current.active = false;
+      if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
+    };
+    renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
+    renderer.domElement.addEventListener('pointermove', onCanvasPointerMove);
+    renderer.domElement.addEventListener('pointerup', onCanvasPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onCanvasPointerUp);
 
     const clock = new THREE.Clock();
     engine.current = {
@@ -2273,6 +2302,10 @@ export default function App() {
       window.removeEventListener('resize', onResize);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('keyup', onKeyUp);
+      renderer.domElement.removeEventListener('pointerdown', onCanvasPointerDown);
+      renderer.domElement.removeEventListener('pointermove', onCanvasPointerMove);
+      renderer.domElement.removeEventListener('pointerup', onCanvasPointerUp);
+      renderer.domElement.removeEventListener('pointercancel', onCanvasPointerUp);
       renderer.dispose();
       mountRef.current?.removeChild(renderer.domElement);
       engine.current = null;
