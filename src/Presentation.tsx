@@ -60,6 +60,16 @@ function StoreScene() {
   );
 }
 
+function MildScares() {
+  return (
+    <div className="presentation-scares" aria-hidden="true">
+      <img className="soft-scare one" src={`${import.meta.env.BASE_URL}assets/screamer-mask.png`} alt="" />
+      <img className="soft-scare two" src={`${import.meta.env.BASE_URL}assets/screamer-grin.png`} alt="" />
+      <img className="soft-scare three" src={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`} alt="" />
+    </div>
+  );
+}
+
 function ScreenshotGrid() {
   return (
     <div className="presentation-shots">
@@ -96,7 +106,7 @@ function DemoPlayer() {
         playsInline
         poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
       />
-      <span className="demo-caption">Видео с игровым видом: полки, клиент, свет и появление монстра.</span>
+      <span className="demo-caption">20 секунд игрового 3D-демо: полки, клиент, камеры, свет и появление монстра.</span>
     </div>
   );
 }
@@ -120,6 +130,7 @@ export default function Presentation() {
   return (
     <main className="presentation-page">
       <StoreScene />
+      <MildScares />
       <section className={`presentation-slide slide-${slide.type}`} key={slide.type}>
         <div className="presentation-copy">
           <span>{slide.kicker}</span>

@@ -1119,6 +1119,42 @@ button:disabled {
   animation: presentationLights 5.6s infinite;
 }
 
+.presentation-scares {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.soft-scare {
+  position: absolute;
+  width: clamp(70px, 10vw, 150px);
+  height: clamp(70px, 10vw, 150px);
+  object-fit: contain;
+  opacity: 0;
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.8)) saturate(.82);
+  transform: translateY(18px) scale(.82);
+}
+
+.soft-scare.one {
+  right: 7vw;
+  top: 15vh;
+  animation: softScarePeek 13s 2.5s infinite;
+}
+
+.soft-scare.two {
+  left: 5vw;
+  bottom: 16vh;
+  animation: softScarePeek 16s 7s infinite;
+}
+
+.soft-scare.three {
+  right: 18vw;
+  bottom: 8vh;
+  animation: softScarePeek 18s 11s infinite;
+}
+
 .store-sign {
   position: absolute;
   right: 6vw;
@@ -1661,6 +1697,21 @@ button:disabled {
   0%, 100% { opacity: .18; transform: translateX(0) skewX(-8deg); }
   45% { opacity: .62; transform: translateX(-36px) skewX(-8deg); }
   70% { opacity: .34; transform: translateX(22px) skewX(-8deg); }
+}
+
+@keyframes softScarePeek {
+  0%, 72%, 100% {
+    opacity: 0;
+    transform: translateY(18px) scale(.82) rotate(-2deg);
+  }
+  76%, 82% {
+    opacity: .28;
+    transform: translateY(0) scale(1) rotate(1deg);
+  }
+  84% {
+    opacity: .12;
+    transform: translateY(10px) scale(.92) rotate(-1deg);
+  }
 }
 
 @keyframes monsterFloat {

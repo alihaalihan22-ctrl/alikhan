@@ -52,8 +52,8 @@ await page.setContent(`
           }
         }
         window.drawFrame = (t) => {
-          const flicker = Math.sin(t * 18) > 0.84 ? 0.35 : 1;
-          const fog = Math.min(1, t / 7);
+          const flicker = Math.sin(t * 12) > 0.88 || Math.sin(t * 3.1) > 0.94 ? 0.32 : 1;
+          const fog = Math.min(1, t / 18);
           const gradient = ctx.createLinearGradient(0, 0, 0, 540);
           gradient.addColorStop(0, '#050709');
           gradient.addColorStop(0.48, '#171a1c');
@@ -84,7 +84,7 @@ await page.setContent(`
             ctx.stroke();
           }
           for (let i = 0; i < 8; i += 1) {
-            const z = 1.2 + i * 0.78 - (t * 0.3) % 0.78;
+            const z = 1.2 + i * 0.78 - (t * 0.16) % 0.78;
             drawShelf(0.86, z, -1, t);
             drawShelf(0.86, z, 1, t);
           }
@@ -95,7 +95,7 @@ await page.setContent(`
             ctx.fillRect(x, 42 + Math.sin(t * 2 + i) * 4, 100, 7);
           }
           ctx.globalAlpha = 1;
-          const clientX = 480 + Math.sin(t * 1.4) * 135;
+          const clientX = 480 + Math.sin(t * 0.9) * 135;
           const clientY = 292 + Math.sin(t * 2) * 8;
           ctx.fillStyle = 'rgba(20,22,24,.95)';
           ctx.beginPath();
@@ -112,14 +112,32 @@ await page.setContent(`
           ctx.arc(clientX - 8, clientY - 2, 3.5, 0, Math.PI * 2);
           ctx.arc(clientX + 8, clientY - 2, 3.5, 0, Math.PI * 2);
           ctx.fill();
-          if (t > 4.2) {
-            const m = Math.min(1, (t - 4.2) / 2.7);
+          if (t > 6.4) {
+            const m = Math.min(1, (t - 6.4) / 7.8);
             ctx.globalAlpha = 0.18 + 0.78 * m;
-            const size = 140 + m * 390 + Math.sin(t * 20) * 10;
-            ctx.drawImage(monster, 480 - size / 2, 190 - size * 0.36, size, size * 0.78);
+            const size = 80 + m * 440 + Math.sin(t * 15) * 8;
+            ctx.drawImage(monster, 480 - size / 2 + Math.sin(t * 1.7) * 35, 190 - size * 0.36, size, size * 0.78);
             ctx.globalAlpha = 1;
             ctx.fillStyle = 'rgba(90,0,0,' + (0.08 + m * 0.24) + ')';
             ctx.fillRect(0, 0, 960, 540);
+          }
+          if ((t > 3.5 && t < 4.1) || (t > 11.4 && t < 12.0) || (t > 16.2 && t < 16.8)) {
+            const pulse = Math.sin(t * 32) * 0.5 + 0.5;
+            ctx.globalAlpha = 0.2 + pulse * 0.22;
+            ctx.drawImage(monster, 745, 90, 115, 90);
+            ctx.globalAlpha = 1;
+          }
+          if (t > 14.5) {
+            ctx.fillStyle = 'rgba(210,230,255,.18)';
+            ctx.fillRect(90, 105, 150, 190);
+            ctx.strokeStyle = 'rgba(220,245,255,.42)';
+            ctx.strokeRect(90, 105, 150, 190);
+            ctx.fillStyle = 'rgba(255,255,255,.72)';
+            ctx.font = '700 14px Arial';
+            ctx.fillText('CAM 03', 105, 130);
+            ctx.globalAlpha = 0.55;
+            ctx.drawImage(monster, 120, 155, 95, 78);
+            ctx.globalAlpha = 1;
           }
           ctx.fillStyle = 'rgba(185,205,210,' + (0.12 + fog * 0.22) + ')';
           for (let i = 0; i < 16; i += 1) {
@@ -129,7 +147,7 @@ await page.setContent(`
           }
           ctx.fillStyle = 'rgba(255,255,255,.82)';
           ctx.font = '700 18px Arial';
-          ctx.fillText('Шестерачка Horror - gameplay demo', 24, 38);
+          ctx.fillText('Shesterochka Horror - 20 sec gameplay demo', 24, 38);
         };
       </script>
     </body>
@@ -138,8 +156,8 @@ await page.setContent(`
 
 await page.locator('#monster').evaluate((img) => img.decode().catch(() => undefined));
 const canvas = page.locator('#game');
-const frameCount = 120;
-const fps = 24;
+const fps = 15;
+const frameCount = fps * 20;
 for (let i = 0; i < frameCount; i += 1) {
   await page.evaluate((time) => window.drawFrame(time), i / fps);
   const name = String(i + 1).padStart(4, '0');
