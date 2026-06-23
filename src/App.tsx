@@ -1741,7 +1741,7 @@ export default function App() {
 
     const customers: CustomerAi[] = ['Аружан', 'Марат', 'Старик', 'Клиент 05:12', 'Охранник', 'Мама с пакетом', 'Ночной покупатель', 'Клиент без лица'].map((_name, index) => {
       const customerMesh = makeCustomer([0x2d79c7, 0x9234a8, 0x59733c, 0x111111, 0x6b1f28, 0xd8a928, 0x335a72, 0x0c0c0d][index], index);
-      customerMesh.position.set(-15 + (index % 4) * 2.4, 0, -12 + Math.floor(index / 4) * 2.1);
+      customerMesh.position.set(15.5 + (index % 2) * 1.2, 0, 10.6 - Math.floor(index / 2) * 1.25);
       customerMesh.visible = false;
       customerMesh.userData.initialPosition = customerMesh.position.clone();
       scene.add(customerMesh);
@@ -1756,7 +1756,7 @@ export default function App() {
         leaveTime: 0,
         checkoutTime: 0,
         angry: false,
-        spawnAt: 2 + index * 5,
+        spawnAt: index < 4 ? 0.35 + index * 1.35 : 8 + (index - 4) * 4,
       };
     });
 
@@ -2134,14 +2134,14 @@ export default function App() {
       state.customers.forEach((customer) => {
         if (customer.stage === 'gone') return;
         if (customer.stage === 'waiting') {
-          if (!current.tasks.phone) return;
           customer.leaveTime += delta;
           if (customer.leaveTime < customer.spawnAt) return;
           customer.stage = 'browse';
           customer.mood = customer.weird ? 'afraid' : 'searching';
           customer.mesh.visible = true;
           customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
-          customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
+          customer.target.copy(customer.spawnAt < 6 ? new THREE.Vector3(-3 + Math.random() * 2, 0, 10.2 + Math.random()) : customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
+          if (customer.spawnAt < 6) giveCustomerProduct(customer);
           customer.leaveTime = 0;
           return;
         }
@@ -2580,6 +2580,16 @@ export default function App() {
     state.renderer.domElement.focus();
     state.controls.lock();
     startAudio();
+    window.setTimeout(() => {
+      const live = engine.current;
+      if (!live || hudRef.current.phase !== 'shift' || hudRef.current.screamer) return;
+      const firstCustomer = live.customers.find((customer) => customer.mesh.visible);
+      if (firstCustomer) {
+        firstCustomer.mesh.userData.stareUntil = live.clock.elapsedTime + 1.5;
+        firstCustomer.mesh.lookAt(live.camera.position.x, 1.55, live.camera.position.z);
+      }
+      scare('screamer-mask');
+    }, 6200);
     saveGame({
       event: 'shift_started',
       phase: 'shift',

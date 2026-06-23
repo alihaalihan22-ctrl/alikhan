@@ -1122,18 +1122,18 @@ button:disabled {
 .presentation-scares {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  z-index: 3;
   pointer-events: none;
   overflow: hidden;
 }
 
 .soft-scare {
   position: absolute;
-  width: clamp(70px, 10vw, 150px);
-  height: clamp(70px, 10vw, 150px);
+  width: clamp(95px, 13vw, 190px);
+  height: clamp(95px, 13vw, 190px);
   object-fit: contain;
   opacity: 0;
-  filter: drop-shadow(0 18px 28px rgba(0,0,0,.8)) saturate(.82);
+  filter: drop-shadow(0 18px 28px rgba(0,0,0,.86)) saturate(.9);
   transform: translateY(18px) scale(.82);
 }
 
@@ -1705,11 +1705,11 @@ button:disabled {
     transform: translateY(18px) scale(.82) rotate(-2deg);
   }
   76%, 82% {
-    opacity: .28;
-    transform: translateY(0) scale(1) rotate(1deg);
+    opacity: .58;
+    transform: translateY(0) scale(1.06) rotate(1deg);
   }
   84% {
-    opacity: .12;
+    opacity: .22;
     transform: translateY(10px) scale(.92) rotate(-1deg);
   }
 }
