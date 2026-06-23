@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const gameUrl = 'https://alikhan.vercel.app';
+const getGameUrl = () => {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  url.pathname = url.pathname.replace(/\/presentation\/?$/, '/');
+  return url.toString();
+};
+
+const gameUrl = getGameUrl();
 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=12&data=${encodeURIComponent(gameUrl)}`;
 
 const slides = [
