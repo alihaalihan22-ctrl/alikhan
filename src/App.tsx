@@ -12,6 +12,7 @@ type Hud = {
   phase: Phase;
   locked: boolean;
   message: string;
+  ending: 'rescue' | 'witness' | 'consumed' | null;
   battery: number;
   fear: number;
   health: number;
@@ -437,20 +438,41 @@ function makeCustomer(color: number, index = 0) {
   bag.rotation.z = 0.16;
   group.add(bag);
   if (index >= 3 && index % 2 === 1) {
+    group.userData.scaryFace = true;
     const mask = new THREE.Mesh(
-      new THREE.BoxGeometry(0.28, 0.34, 0.035),
-      new THREE.MeshStandardMaterial({ color: 0xe8e1d4, roughness: 0.72, metalness: 0.02 }),
+      new THREE.SphereGeometry(0.205, 24, 16),
+      new THREE.MeshStandardMaterial({
+        color: index % 4 === 1 ? 0xf0eee5 : 0xcfc8bd,
+        roughness: 0.48,
+        metalness: 0.02,
+      }),
     );
-    mask.position.set(0, 1.5, -0.255);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffcf6c });
+    mask.position.set(0, 1.52, -0.19);
+    mask.scale.set(0.78, 1.12, 0.2);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: index % 4 === 1 ? 0x050000 : 0xffcf6c });
     [-0.07, 0.07].forEach((x) => {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 8), eyeMat);
-      eye.position.set(x, 1.56, -0.285);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.038, 12, 8), eyeMat);
+      eye.position.set(x, 1.57, -0.255);
       group.add(eye);
+      if (index % 4 !== 1) {
+        const glow = new THREE.PointLight(0xffcf6c, 0.18, 0.9);
+        glow.position.copy(eye.position);
+        group.add(glow);
+      }
     });
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.018), new THREE.MeshBasicMaterial({ color: 0x050000 }));
-    mouth.position.set(0, 1.42, -0.292);
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.055, 0.025), new THREE.MeshBasicMaterial({ color: 0x050000 }));
+    mouth.position.set(0, 1.43, -0.266);
+    const smileCut = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.018, 0.028), new THREE.MeshBasicMaterial({ color: 0xf1eadf }));
+    smileCut.position.set(0, 1.435, -0.285);
+    const crackMat = new THREE.MeshBasicMaterial({ color: 0x1a0b0b });
+    for (let i = 0; i < 4; i += 1) {
+      const crack = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.12 + i * 0.025, 0.018), crackMat);
+      crack.position.set(-0.1 + i * 0.065, 1.5 + (i % 2) * 0.04, -0.278);
+      crack.rotation.z = -0.45 + i * 0.28;
+      group.add(crack);
+    }
     group.add(mask, mouth);
+    if (index % 4 === 3) group.add(smileCut);
   }
   return group;
 }
@@ -1099,6 +1121,7 @@ export default function App() {
     phase: 'menu',
     locked: false,
     message: 'Shesterochka Horror: press start, then click the game to lock the mouse. Phone is on the red checkout counter.',
+    ending: null,
     battery: 100,
     fear: 0,
     served: 0,
@@ -1792,6 +1815,9 @@ export default function App() {
       makeLoreNote([11.3, 1.05, 12.8], 'Р—Р°РїРёСЃСЊ РѕС…СЂР°РЅС‹: РєР°РјРµСЂР° Сѓ РјСѓСЃРѕСЂРєРё РѕС‚РєР»СЋС‡Р°Р»Р°СЃСЊ СЂРѕРІРЅРѕ РІ 05:12 С‚СЂРё РЅРѕС‡Рё РїРѕРґСЂСЏРґ. РџРѕСЃР»Рµ РїРѕРјРµС… РєР»РёРµРЅС‚С‹ Р·Р°Р±С‹РІР°Р»Рё, Р·Р°С‡РµРј РїСЂРёС€Р»Рё.'),
       makeLoreNote([-15.3, 1.05, -4.6], 'РќР°РєР»Р°РґРЅР°СЏ СЃРєР»Р°РґР°: РїРѕСЃС‚Р°РІРєР° СЃ РјР°СЂРєРёСЂРѕРІРєРѕР№ РЁ-6 РїСЂРёС€Р»Р° Р±РµР· РІРѕРґРёС‚РµР»СЏ. Р’РЅСѓС‚СЂРё РєРѕСЂРѕР±РѕРє СЃР»С‹С€Р°Р»Рё РґС‹С…Р°РЅРёРµ.'),
       makeLoreNote([5.7, 0.45, 38.8], 'РЎС‚Р°СЂР°СЏ Р·Р°РїРёСЃРєР°: РЅРµ СЃС‚РѕР№ Сѓ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ РґРѕР»СЊС€Рµ РјРёРЅСѓС‚С‹. РћРЅ СЃРЅР°С‡Р°Р»Р° РєРѕРїРёСЂСѓРµС‚ С€Р°РіРё, РїРѕС‚РѕРј РіРѕР»РѕСЃ.'),
+      makeLoreNote([-5.2, 1.22, 11.1], 'Лор: красный телефон звонит не из охраны. Это запись кассира, который пропал после смены 05:12. Он предупреждает только тех, кто еще может уйти.'),
+      makeLoreNote([-17.25, 1.2, 5.2], 'Лор: зеркало показывает не отражение, а то, что стоит за тобой через несколько секунд. Если лицо клиента в зеркале черное, не держи его у кассы слишком долго.'),
+      makeLoreNote([13.4, 1.05, 15.2], 'Лор: у магазина три финала. Убеги через дальний выход, вернись в магазин после погони или дай контейнеру догнать тебя. Камеры запомнят выбор.'),
     ];
 
     const trashObjects: THREE.Object3D[] = [
@@ -2435,9 +2461,10 @@ export default function App() {
           state.outsideShadow.visible = false;
           patchHud({
             phase: current.outsideFinal ? 'escaped' : 'shift',
+            ending: current.outsideFinal ? 'witness' : null,
             outsideFinal: false,
             message: current.outsideFinal
-              ? 'You slammed back into the store. The glass doors closed before the monster reached you.'
+              ? 'Концовка 2/3: Свидетель. Ты заманил монстра к магазину, двери закрылись, а камеры сохранили запись.'
               : 'You returned to the store through the automatic doors.',
           });
         } else {
@@ -2469,11 +2496,11 @@ export default function App() {
               state.monster.mesh.position.add(toPlayer.normalize().multiplyScalar(delta * chaseSpeed));
             }
             if (state.monster.mesh.position.distanceTo(state.camera.position) < 2.5) {
-              patchHud({ phase: 'dead', message: 'The monster caught you near the dumpsters.' });
+              patchHud({ phase: 'dead', ending: 'consumed', message: 'Концовка 3/3: Поглощение. Монстр поймал тебя возле контейнеров.' });
               scare('screamer-trash3d');
             }
             if (state.camera.position.distanceTo(state.helpExit.position) < 4) {
-              patchHud({ phase: 'escaped', message: 'РўС‹ РґРѕР±СЂР°Р»СЃСЏ РґРѕ РІС‹С…РѕРґР° СЃ РїР°СЂРєРѕРІРєРё Рё РІС‹Р·РІР°Р» РїРѕРјРѕС‰СЊ.' });
+              patchHud({ phase: 'escaped', ending: 'rescue', message: 'Концовка 1/3: Спасение. Ты добрался до дальнего выхода и вызвал помощь.' });
             }
           } else {
             state.monster.mesh.visible = false;
@@ -2493,7 +2520,7 @@ export default function App() {
       }
 
       if (current.health <= 0 && current.phase !== 'dead') {
-        patchHud({ phase: 'dead', message: 'РўС‹ РїРѕС‚РµСЂСЏР» СЃРѕР·РЅР°РЅРёРµ РјРµР¶РґСѓ РїРѕР»РєР°РјРё.' });
+        patchHud({ phase: 'dead', ending: 'consumed', message: 'Концовка 3/3: Поглощение. Ты потерял сознание между полками, и магазин закрылся вместе с тобой.' });
         scare('screamer-grin');
       }
 
@@ -2654,6 +2681,7 @@ export default function App() {
     patchHud({
       phase: 'shift',
       message: localOnline ? `Online room: ${onlineRoom}. Open this game in another tab with the same room to see the second cashier.` : localCoop ? 'Два игрока на одном ПК: WASD и I/J/K/L.' : 'Ночная смена началась. Клиенты уже заходят в магазин.',
+      ending: null,
       tasks: initialTasks,
       served: 0,
       stocked: 0,
@@ -2812,6 +2840,7 @@ export default function App() {
       state.monster.emerging = 0;
       patchHud({
         phase: 'shift',
+        ending: null,
         health: 100,
         fear: 35,
         outsideFinal: false,
@@ -3046,6 +3075,23 @@ export default function App() {
     }
     patchHud({ message: 'Move closer to an object: red phone, checkout, shelf, trash, cameras, fridge, cart, or automatic doors.' });
   };
+
+  const endingCopy = hud.ending === 'rescue'
+    ? {
+      title: 'Концовка 1/3: Спасение',
+      text: 'Ты выбрал дальний выход, успел вызвать помощь и вынес запись с камер. Утром магазин закрыли, но в зеркале охраны снова появился красный телефон.',
+    }
+    : hud.ending === 'witness'
+      ? {
+        title: 'Концовка 2/3: Свидетель',
+        text: 'Ты вернулся в магазин и запер автоматические двери. Монстр не вошел, но теперь камеры показывают тебя возле контейнера за несколько минут до того, как ты туда пришел.',
+      }
+      : hud.ending === 'consumed'
+        ? {
+          title: 'Концовка 3/3: Поглощение',
+          text: 'Контейнер забрал голос кассира. Следующей ночью красный телефон позвонит новому сотруднику твоим голосом.',
+        }
+        : null;
 
   return (
     <main className="three-game">
@@ -3335,10 +3381,22 @@ export default function App() {
 
       {hud.phase === 'dead' && (
         <section className="death-screen">
-          <h2>You died</h2>
-          <p>The monster dragged you away from the dumpsters. Respawn near the store doors and try the outside route again.</p>
+          <h2>{endingCopy?.title ?? 'You died'}</h2>
+          <p>{endingCopy?.text ?? 'The monster dragged you away from the dumpsters. Respawn near the store doors and try the outside route again.'}</p>
           <button type="button" onClick={interact}>Respawn</button>
-          <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', health: 100, fear: 0 })}>Main menu</button>
+          <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', health: 100, fear: 0, ending: null })}>Main menu</button>
+        </section>
+      )}
+
+      {hud.phase === 'escaped' && endingCopy && (
+        <section className="ending-screen">
+          <span>Шестёрочка Horror</span>
+          <h2>{endingCopy.title}</h2>
+          <p>{endingCopy.text}</p>
+          <div className="menu-actions">
+            <button type="button" onClick={() => startGame(false)}>Играть снова</button>
+            <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', ending: null, health: 100, fear: 0 })}>Главный экран</button>
+          </div>
         </section>
       )}
 

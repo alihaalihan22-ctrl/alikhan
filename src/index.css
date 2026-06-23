@@ -896,7 +896,8 @@ button:disabled {
   color: #ffcf6c;
 }
 
-.death-screen {
+.death-screen,
+.ending-screen {
   position: fixed;
   left: 50%;
   top: 50%;
@@ -912,7 +913,22 @@ button:disabled {
   box-shadow: 0 28px 90px rgba(0,0,0,.75), inset 0 0 70px rgba(164,24,34,.18);
 }
 
-.death-screen h2 {
+.ending-screen {
+  background:
+    radial-gradient(circle at 74% 18%, rgba(255, 207, 108, .18), transparent 32%),
+    linear-gradient(145deg, rgba(18, 3, 5, .94), rgba(0,0,0,.9));
+}
+
+.ending-screen span {
+  color: #ffcf6c;
+  font-size: 13px;
+  font-weight: 1000;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.death-screen h2,
+.ending-screen h2 {
   margin: 0;
   color: #ffe08c;
   font-size: clamp(38px, 7vw, 72px);
@@ -920,7 +936,8 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.death-screen p {
+.death-screen p,
+.ending-screen p {
   margin: 0;
   color: rgba(255,247,239,.78);
   line-height: 1.5;
