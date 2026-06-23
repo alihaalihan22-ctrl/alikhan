@@ -91,6 +91,9 @@ type FridgeUnit = {
   mesh: THREE.Group;
   door: THREE.Object3D;
   manualOpen: boolean;
+  products: THREE.Object3D[];
+  mist: THREE.Group;
+  openedOnce: boolean;
 };
 
 const productNames = ['Pepsi', 'Fanta', 'Р’РѕРґР°', 'Р§РёРїСЃС‹', 'Р‘СѓСЂРіРµСЂ', 'РҐРѕС‚-РґРѕРі', 'РљРѕСЂРЅ-РґРѕРі', 'РЁРѕРєРѕР»Р°РґРєР°', 'РџРµС‡РµРЅСЊРµ', 'РћРІРѕС‰Рё', 'Р¤СЂСѓРєС‚С‹', 'РњРѕСЂРѕР¶РµРЅРѕРµ'];
@@ -771,6 +774,7 @@ function makeShadowFigure() {
 
 function makeFridge(pos: [number, number, number]): FridgeUnit {
   const group = new THREE.Group();
+  const products: THREE.Object3D[] = [];
   const frame = box(2.45, 3.18, 0.55, 0x1c2228, [0, 1.59, 0]);
   const inner = box(2.05, 2.62, 0.08, 0xd7f6ff, [0, 1.55, -0.33]);
   inner.userData.isFridgeGlow = true;
@@ -806,9 +810,22 @@ function makeFridge(pos: [number, number, number]): FridgeUnit {
       const item = makeProduct(productNames[i % productNames.length], [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8f4ff, 0xffffff][i % 5]);
       item.position.set(-0.78 + col * 0.39, 0.58 + row * 0.62, -0.42);
       item.scale.setScalar(0.56);
+      item.userData.fridgeProduct = productNames[i % productNames.length];
+      products.push(item);
       group.add(item);
     }
   }
+  const mist = new THREE.Group();
+  const mistMat = new THREE.MeshBasicMaterial({ color: 0xd8f6ff, transparent: true, opacity: 0.16, depthWrite: false });
+  for (let i = 0; i < 12; i += 1) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.12 + (i % 3) * 0.035, 10, 8), mistMat.clone());
+    puff.position.set(-0.8 + Math.random() * 1.6, 0.55 + Math.random() * 2.1, -0.78 - Math.random() * 0.28);
+    puff.userData.base = puff.position.clone();
+    puff.userData.speed = 0.25 + Math.random() * 0.55;
+    mist.add(puff);
+  }
+  mist.visible = false;
+  group.add(mist);
   group.position.set(...pos);
   group.traverse((child) => {
     if (child instanceof THREE.Mesh) {
@@ -816,7 +833,7 @@ function makeFridge(pos: [number, number, number]): FridgeUnit {
       child.receiveShadow = true;
     }
   });
-  return { mesh: group, door: glass, manualOpen: false };
+  return { mesh: group, door: glass, manualOpen: false, products, mist, openedOnce: false };
 }
 
 function makeMetalShelf(pos: [number, number, number]) {
@@ -2178,6 +2195,16 @@ export default function App() {
         const shouldOpen = fridge.manualOpen || (Math.abs(localPlayer.x) < 1.6 && Math.abs(localPlayer.z) < 2.1);
         const targetZ = shouldOpen ? fridge.door.userData.openZ : fridge.door.userData.closedZ;
         fridge.door.position.z += (targetZ - fridge.door.position.z) * Math.min(1, delta * 6);
+        fridge.mist.visible = shouldOpen;
+        fridge.mist.children.forEach((puff, index) => {
+          const base = puff.userData.base as THREE.Vector3 | undefined;
+          if (!base) return;
+          puff.position.x += Math.sin(state.clock.elapsedTime * 0.8 + index) * delta * 0.05;
+          puff.position.y += Number(puff.userData.speed ?? 0.35) * delta;
+          const mat = puff instanceof THREE.Mesh ? puff.material : null;
+          if (mat instanceof THREE.MeshBasicMaterial) mat.opacity += ((shouldOpen ? 0.18 : 0) - mat.opacity) * Math.min(1, delta * 5);
+          if (puff.position.y > base.y + 0.55) puff.position.copy(base);
+        });
         fridge.mesh.traverse((child) => {
           if (child instanceof THREE.PointLight) child.intensity += ((shouldOpen ? 2.1 : 1.05) - child.intensity) * Math.min(1, delta * 5);
         });
@@ -2720,7 +2747,13 @@ export default function App() {
       item.userData.follow = false;
       item.userData.items = 0;
     });
-    state.fridges.forEach((item) => { item.manualOpen = false; });
+    state.fridges.forEach((item) => {
+      item.manualOpen = false;
+      item.openedOnce = false;
+      item.mesh.userData.faceSeen = false;
+      item.mist.visible = false;
+      item.products.forEach((product) => { product.visible = true; });
+    });
     state.bandits.forEach((bandit) => {
       bandit.active = false;
       bandit.health = 3;
@@ -2869,8 +2902,39 @@ export default function App() {
 
     const fridge = state.fridges.find((item) => item.mesh.position.distanceTo(pos) < 3);
     if (fridge) {
+      if (fridge.manualOpen && !current.heldItem) {
+        const product = fridge.products.find((item) => item.visible);
+        if (product) {
+          const productName = String(product.userData.fridgeProduct ?? 'Холодный товар');
+          product.visible = false;
+          patchHud({
+            heldItem: productName,
+            heldItemFromStock: false,
+            fear: clamp(current.fear + (fridge.openedOnce ? 0 : 3), 0, 100),
+            message: `Ты взял из холодильника: ${productName}. Можно положить в корзину или тележку.`,
+          });
+          if (!fridge.mesh.userData.faceSeen && current.served >= 2 && !current.screamer) {
+            fridge.mesh.userData.faceSeen = true;
+            playWhisperSound();
+            patchHud({
+              heldItem: productName,
+              heldItemFromStock: false,
+              fear: clamp(current.fear + 9, 0, 100),
+              message: `Ты взял ${productName}. На стекле на секунду появилось чужое лицо, но за спиной никого нет.`,
+            });
+            if (Math.random() < 0.45) scare('screamer-mask');
+          }
+          return;
+        }
+        patchHud({ message: 'Холодильник пустой. Внутри только холодный свет и следы пальцев на стекле.' });
+        return;
+      }
       fridge.manualOpen = !fridge.manualOpen;
-      patchHud({ message: fridge.manualOpen ? 'РўС‹ РѕС‚РєСЂС‹Р» С…РѕР»РѕРґРёР»СЊРЅРёРє. РҐРѕР»РѕРґРЅС‹Р№ СЃРІРµС‚ РІС‹С‚РµРєР°РµС‚ РІ РїСЂРѕС…РѕРґ.' : 'РўС‹ Р·Р°РєСЂС‹Р» РґРІРµСЂС†Сѓ С…РѕР»РѕРґРёР»СЊРЅРёРєР°.' });
+      if (fridge.manualOpen && !fridge.openedOnce) {
+        fridge.openedOnce = true;
+        playImpactSound();
+      }
+      patchHud({ message: fridge.manualOpen ? 'Ты открыл холодильник. Нажми E еще раз, чтобы взять товар изнутри.' : 'Ты закрыл холодильник. Стекло еще несколько секунд покрыто паром.' });
       return;
     }
 
