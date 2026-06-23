@@ -15,32 +15,32 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=1
 const slides = [
   {
     kicker: 'Slide 01',
-    title: 'Алихан Сулейменов',
-    text: 'Я создаю 3D-хоррор про ночную смену кассира и люблю делать игры, где обычное место постепенно становится опасным.',
+    title: 'Alikhan Suleymenov',
+    text: 'I am building a first-person 3D horror game about a night shift inside a strange supermarket.',
     type: 'intro',
   },
   {
     kicker: 'Slide 02',
-    title: 'Шестерачка Horror',
-    text: 'First-person indie horror: игрок работает ночью в супермаркете, обслуживает клиентов, пополняет полки, смотрит камеры и пытается пережить финальную погоню.',
+    title: 'Shesterochka Horror',
+    text: 'A web horror game where you serve customers, restock shelves, answer the red phone, check cameras, collect trash, and survive the monster outside.',
     type: 'app',
   },
   {
     kicker: 'Slide 03',
-    title: 'Что есть в игре',
-    text: '3D-магазин, клиенты с товарами, холодильники, касса, склад, камеры, мусорная зона, монстр, скримеры, мобильное управление и онлайн-комната.',
+    title: 'Gameplay Systems',
+    text: 'The game has 3D shelves, customers with products, automatic doors, fridges, carts, security room, trash bags, screamers, mobile controls, and an online room mode.',
     type: 'screens',
   },
   {
     kicker: 'Slide 04',
-    title: 'Video Demo',
-    text: '20 секунд 3D-демо: проход по магазину, полки, клиент, камера наблюдения, свет и постепенное появление монстра.',
+    title: '20 Second Demo',
+    text: 'The video shows the 3D supermarket mood: shelves, customer, camera screen, flickering light, and the monster appearing in the distance.',
     type: 'demo',
   },
   {
     kicker: 'Slide 05',
-    title: 'Играй сейчас',
-    text: 'Открой игру, создай комнату, пригласи друга и попробуй закончить смену до того, как контейнеры начнут двигаться.',
+    title: 'Play Now',
+    text: 'Scan the QR code, open the game, create a room, invite a friend, and try to finish the shift before the dumpster wakes up.',
     type: 'qr',
   },
 ] as const;
@@ -48,7 +48,7 @@ const slides = [
 function StoreScene() {
   return (
     <div className="presentation-store" aria-hidden="true">
-      <i className="store-sign">6ШЕСТЕРАЧКА</i>
+      <i className="store-sign">6SHESTEROCHKA</i>
       <i className="store-door left" />
       <i className="store-door right" />
       <i className="store-light one" />
@@ -74,20 +74,20 @@ function ScreenshotGrid() {
   return (
     <div className="presentation-shots">
       <figure>
-        <span className="shot-label">Касса</span>
+        <span className="shot-label">Checkout</span>
         <i className="shot-ceiling" />
         <i className="shot-counter" />
         <i className="shot-customer" />
       </figure>
       <figure>
-        <span className="shot-label">Онлайн-комната</span>
+        <span className="shot-label">Stock Room</span>
         <i className="shot-shelf" />
         <i className="shot-box a" />
         <i className="shot-box b" />
         <i className="shot-box c" />
       </figure>
       <figure>
-        <span className="shot-label">Контейнеры</span>
+        <span className="shot-label">Dumpster Monster</span>
         <img src={`${import.meta.env.BASE_URL}assets/monster-mouth.png`} alt="" />
       </figure>
     </div>
@@ -106,7 +106,7 @@ function DemoPlayer() {
         playsInline
         poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
       />
-      <span className="demo-caption">20 секунд игрового 3D-демо с клиентом, камерами, светом и монстром.</span>
+      <span className="demo-caption">20 seconds of 3D gameplay mood: shelves, customer, cameras, light, and monster.</span>
     </div>
   );
 }
@@ -146,7 +146,7 @@ export default function Presentation() {
           )}
           {slide.type === 'qr' && (
             <a className="presentation-cta" href={gameUrl}>
-              Открыть игру
+              Open Game
             </a>
           )}
         </div>
@@ -168,7 +168,7 @@ export default function Presentation() {
           {slide.type === 'demo' && <DemoPlayer />}
           {slide.type === 'qr' && (
             <div className="qr-card">
-              <img src={qrUrl} alt="QR code на игру Шестерачка Horror" />
+              <img src={qrUrl} alt="QR code to Shesterochka Horror" />
               <strong>{gameUrl}</strong>
             </div>
           )}
@@ -177,13 +177,13 @@ export default function Presentation() {
 
       <nav className="presentation-nav" aria-label="Presentation navigation">
         <button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>
-          Назад
+          Back
         </button>
         <div className="presentation-progress">
           <i style={{ width: `${progress}%` }} />
         </div>
         <button type="button" onClick={() => setIndex((value) => Math.min(slides.length - 1, value + 1))} disabled={index === slides.length - 1}>
-          Далее
+          Next
         </button>
       </nav>
     </main>

@@ -122,6 +122,16 @@ button:disabled {
   line-height: 1.55;
 }
 
+.title-screen::before {
+  content: "6SHESTEROCHKA";
+}
+
+.title-screen h1 {
+  max-width: 980px;
+  font-size: clamp(42px, 7vw, 96px);
+  line-height: .96;
+}
+
 .title-screen .menu-atmosphere {
   max-width: 720px;
   color: rgba(255, 247, 239, .62);
@@ -884,6 +894,36 @@ button:disabled {
   display: block;
   margin-top: 6px;
   color: #ffcf6c;
+}
+
+.death-screen {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 90;
+  display: grid;
+  gap: 14px;
+  width: min(520px, calc(100vw - 32px));
+  padding: 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(18, 3, 5, .94), rgba(0,0,0,.88));
+  box-shadow: 0 28px 90px rgba(0,0,0,.75), inset 0 0 70px rgba(164,24,34,.18);
+}
+
+.death-screen h2 {
+  margin: 0;
+  color: #ffe08c;
+  font-size: clamp(38px, 7vw, 72px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.death-screen p {
+  margin: 0;
+  color: rgba(255,247,239,.78);
+  line-height: 1.5;
 }
 
 .camera-panel {

@@ -179,13 +179,13 @@ const getSavedReviews = (): GameReview[] => {
 };
 
 const taskLabels: Record<TaskKey, string> = {
-  phone: 'РѕС‚РІРµС‚СЊ РЅР° С‚РµР»РµС„РѕРЅ РѕС…СЂР°РЅС‹',
-  cashier: 'РѕР±СЃР»СѓР¶Рё РєР»РёРµРЅС‚РѕРІ РЅР° РєР°СЃСЃРµ',
-  stock: 'РїРѕРїРѕР»РЅРё РїСѓСЃС‚С‹Рµ РїРѕР»РєРё',
-  trash: 'СЃРѕР±РµСЂРё РјСѓСЃРѕСЂРЅС‹Рµ РїР°РєРµС‚С‹',
-  cameras: 'РїСЂРѕРІРµСЂСЊ РєР°РјРµСЂС‹ РІ РєРѕРјРЅР°С‚Рµ РѕС…СЂР°РЅС‹',
-  bandits: 'РѕС‚Р±РµР№СЃСЏ РѕС‚ Р±Р°РЅРґРёС‚РѕРІ',
-  outside: 'РІС‹РЅРµСЃРё РјСѓСЃРѕСЂ РЅР°СЂСѓР¶Сѓ',
+  phone: 'answer the red security phone',
+  cashier: 'serve customers at checkout',
+  stock: 'restock empty shelves',
+  trash: 'collect trash bags',
+  cameras: 'check security cameras',
+  bandits: 'fight off bandits',
+  outside: 'take trash outside',
 };
 
 const customerWaypoints = [
@@ -1096,7 +1096,7 @@ export default function App() {
   const [hud, setHud] = useState<Hud>({
     phase: 'menu',
     locked: false,
-    message: 'РЁРµСЃС‚С‘СЂРѕС‡РєР° Horror: РЅР°Р¶РјРё СЃС‚Р°СЂС‚, Р·Р°С‚РµРј РєР»РёРєРЅРё РїРѕ РёРіСЂРµ РґР»СЏ Р·Р°С…РІР°С‚Р° РјС‹С€Рё.',
+    message: 'Shesterochka Horror: press start, then click the game to lock the mouse. Phone is on the red checkout counter.',
     battery: 100,
     fear: 0,
     served: 0,
@@ -1607,12 +1607,18 @@ export default function App() {
     const storeSign = makeStoreSign([5.5, 4.2, 18.35]);
     scene.add(storeSign);
 
-    const phone = box(0.8, 0.35, 0.65, 0x111111, [-14, 1.1, 12]);
-    scene.add(phone);
-
     const counter = box(5, 1.05, 1.4, 0x8d1c24, [-3, 0.52, 12]);
     scene.add(counter);
     colliders.push(new THREE.Box3().setFromObject(counter));
+    const phone = box(0.8, 0.35, 0.65, 0x111111, [-5.05, 1.18, 11.55]);
+    const phoneLight = new THREE.PointLight(0xff2636, 1.8, 5);
+    phoneLight.position.set(-5.05, 1.65, 11.55);
+    const phoneBeacon = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 16, 10),
+      new THREE.MeshBasicMaterial({ color: 0xff2636 }),
+    );
+    phoneBeacon.position.set(-5.05, 1.42, 11.22);
+    scene.add(phone, phoneLight, phoneBeacon);
     const registerScreen = box(0.55, 0.38, 0.08, 0x111820, [-4.15, 1.28, 11.55]);
     const scanner = box(0.5, 0.1, 0.34, 0x101010, [-3.15, 1.1, 11.55]);
     const cardTerminal = box(0.22, 0.12, 0.32, 0x1d252b, [-2.25, 1.15, 11.55]);
@@ -1706,7 +1712,7 @@ export default function App() {
         const product = makeProduct(requiredProduct, productColorFor(requiredProduct));
         product.position.set(x, 0.42 + (i % 3) * 0.62, -7 + Math.floor(i / 3) * 2.1);
         product.scale.setScalar(0.82);
-        product.visible = shelfIndex < 2;
+        product.visible = shelfIndex < 3 || (shelfIndex === 3 && i % 2 === 0);
         product.userData.initialVisible = product.visible;
         product.userData.product = requiredProduct;
         product.userData.requiredProduct = requiredProduct;
@@ -1716,6 +1722,15 @@ export default function App() {
         scene.add(slotMarker);
         scene.add(product);
         stockObjects.push(product);
+        if (product.visible) {
+          [-0.34, 0.34].forEach((offset, copyIndex) => {
+            const facing = makeProduct(requiredProduct, productColorFor(requiredProduct));
+            facing.position.copy(product.position).add(new THREE.Vector3(offset, 0.02 * copyIndex, 0.18));
+            facing.scale.setScalar(0.58);
+            facing.userData.decorativeProduct = true;
+            scene.add(facing);
+          });
+        }
       }
     });
 
@@ -2752,6 +2767,23 @@ export default function App() {
       return;
     }
 
+    if (current.phase === 'dead') {
+      state.camera.position.set(16.2, 1.7, 12);
+      state.scene.fog = new THREE.FogExp2(0x050607, 0.026);
+      state.monster.mesh.visible = false;
+      state.monster.active = false;
+      state.monster.mood = 'hidden';
+      state.monster.emerging = 0;
+      patchHud({
+        phase: 'shift',
+        health: 100,
+        fear: 35,
+        outsideFinal: false,
+        message: 'Respawned near the automatic doors. You can go outside again, but the dumpster remembers you.',
+      });
+      return;
+    }
+
     if (current.phase === 'outside' && !current.outsideFinal && state.camera.position.distanceTo(new THREE.Vector3(0, 1.7, 22)) < 4.5) {
       state.camera.position.set(16.3, 1.7, 12);
       state.outsideObjects.forEach((object) => { object.visible = true; });
@@ -2852,7 +2884,7 @@ export default function App() {
 
     if (near(state.phone) && !current.tasks.phone) {
       completeTask('phone');
-      patchHud({ message: 'Р“РѕР»РѕСЃ РІ С‚РµР»РµС„РѕРЅРµ: "РќРѕС‡СЊСЋ РЅРµР»СЊР·СЏ РІС‹С…РѕРґРёС‚СЊ Рє РјСѓСЃРѕСЂРЅС‹Рј РєРѕРЅС‚РµР№РЅРµСЂР°Рј."' });
+      patchHud({ message: 'Phone voice: Do not stay near the dumpsters at night. The cameras lose signal there.' });
       scare('screamer-dust');
       return;
     }
@@ -2949,7 +2981,7 @@ export default function App() {
       if (cameraOpen) scare('screamer-mask');
       return;
     }
-    if (near(state.exitDoor, 3) && current.phase !== 'outside' && current.phase !== 'dead' && current.phase !== 'escaped') {
+    if (near(state.exitDoor, 3) && current.phase !== 'outside' && current.phase !== 'escaped') {
       const finalReady = current.phase === 'armed' || Object.values(current.tasks).filter(Boolean).length >= 6;
       completeTask('outside');
       if (finalReady) {
@@ -2971,12 +3003,12 @@ export default function App() {
         phase: 'outside',
         outsideFinal: finalReady,
         message: finalReady
-          ? 'Р¤РёРЅР°Р»СЊРЅР°СЏ СЃС†РµРЅР°: РЅРѕС‡СЊ, С‚СѓРјР°РЅ, С„РѕРЅР°СЂРё. РњРѕРЅСЃС‚СЂ РІС‹Р»РµР·Р°РµС‚ РёР· РјСѓСЃРѕСЂРєРё.'
-          : 'РўС‹ РІС‹С€РµР» РЅР° СѓР»РёС†Сѓ СЂР°РЅСЊС€Рµ РІСЂРµРјРµРЅРё. РџР°СЂРєРѕРІРєР° РїСѓСЃС‚Р°СЏ, РЅРѕ Сѓ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ СЃР»С‹С€РЅРѕ РјРѕРєСЂРѕРµ РґС‹С…Р°РЅРёРµ.',
+          ? 'Final outside scene: night, fog, street lamps. The monster crawls out of the dumpster.'
+          : 'You stepped outside early. The parking lot is empty, but something breathes near the dumpsters.',
       });
       return;
     }
-    patchHud({ message: 'РџРѕРґРѕР№РґРё Р±Р»РёР¶Рµ: С‚РµР»РµС„РѕРЅ, РєР°СЃСЃР°, РїРѕР»РєРё, РјСѓСЃРѕСЂ, РєР°РјРµСЂС‹ РёР»Рё РІС‹С…РѕРґ.' });
+    patchHud({ message: 'Move closer to an object: red phone, checkout, shelf, trash, cameras, fridge, cart, or automatic doors.' });
   };
 
   return (
@@ -2985,13 +3017,13 @@ export default function App() {
 
       {hud.phase === 'menu' && (
         <section className="title-screen">
-          <h1>РЁРµСЃС‚С‘СЂРѕС‡РєР° Horror</h1>
-          <p>3D-С…РѕСЂСЂРѕСЂ РѕС‚ РїРµСЂРІРѕРіРѕ Р»РёС†Р°. РќРѕС‡РЅР°СЏ СЃРјРµРЅР°, РєР»РёРµРЅС‚С‹, РєР°РјРµСЂС‹ Рё РјРѕРЅСЃС‚СЂ Сѓ РјСѓСЃРѕСЂРЅС‹С… РєРѕРЅС‚РµР№РЅРµСЂРѕРІ.</p>
-          <p className="menu-atmosphere">Р”РѕР¶РґСЊ РЅР° РїР°СЂРєРѕРІРєРµ. РҐРѕР»РѕРґРЅС‹Рµ С…РѕР»РѕРґРёР»СЊРЅРёРєРё. РљР»РёРµРЅС‚С‹, РєРѕС‚РѕСЂС‹Рµ Р·Р°Р±С‹РІР°СЋС‚ Р·Р°С‡РµРј РїСЂРёС€Р»Рё.</p>
+          <h1>Shesterochka Horror</h1>
+          <p>First-person 3D horror about a night shift cashier. Serve customers, restock shelves, check cameras, collect trash, and survive the monster outside.</p>
+          <p className="menu-atmosphere">Phone location: red blinking phone on the checkout counter. Press E near it.</p>
           <div className="guest-login-actions">
-            <button type="button" className="ghost" onClick={() => setReviewsOpen(true)}>РћС‚Р·С‹РІС‹</button>
-            <button type="button" onClick={() => startGame(false)}>РРіСЂР°С‚СЊ РѕРґРЅРѕРјСѓ</button>
-            <button type="button" className="ghost" onClick={() => startGame(true)}>РРіСЂР°С‚СЊ РІРґРІРѕРµРј</button>
+            <button type="button" className="ghost" onClick={() => setReviewsOpen(true)}>Reviews</button>
+            <button type="button" onClick={() => startGame(false)}>Play Solo</button>
+            <button type="button" className="ghost" onClick={() => startGame(true)}>Local Co-op</button>
             <label className="room-field">
               Room
               <input
@@ -3002,10 +3034,10 @@ export default function App() {
               />
             </label>
             <button type="button" className="ghost" onClick={() => startGame('online')}>Online room</button>
-            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>РЎРєРёРЅС‹ РєР°СЃСЃРёСЂР°</button>
-            <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Р’РѕР№С‚Рё</button>
-            <span>{session?.user.email ? `Р’РѕС€РµР»: ${session.user.email}` : 'Р“РѕСЃС‚СЊ: РїСЂРѕРіСЂРµСЃСЃ С…СЂР°РЅРёС‚СЃСЏ РЅР° СЌС‚РѕРј СѓСЃС‚СЂРѕР№СЃС‚РІРµ'}</span>
-            <span>РќР°РґРµС‚Рѕ: {selectedSkin.name}</span>
+            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Cashier Skins</button>
+            <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Login</button>
+            <span>{session?.user.email ? `Signed in: ${session.user.email}` : 'Guest: progress is saved on this device'}</span>
+            <span>Skin: {selectedSkin.name}</span>
           </div>
         </section>
       )}
@@ -3237,32 +3269,42 @@ export default function App() {
 
       {settings.showHud && <section className="hud3d">
         <div>
-          <b>{hud.phase === 'outside' ? 'Р¤РёРЅР°Р»: СѓР»РёС†Р°' : 'РќРѕС‡РЅР°СЏ СЃРјРµРЅР°'}</b>
+          <b>{hud.phase === 'dead' ? 'You died' : hud.phase === 'outside' ? 'Final: outside' : 'Night shift'}</b>
           <span>{hud.message}</span>
-          {hud.heldItem ? <em>Р’ СЂСѓРєР°С…: {hud.heldItem}</em> : null}
+          {hud.heldItem ? <em>Holding: {hud.heldItem}</em> : null}
         </div>
         <div className="bars">
-          <label>Р—РґРѕСЂРѕРІСЊРµ <i style={{ width: `${hud.health}%` }} /></label>
-          <label>Р‘Р°С‚Р°СЂРµСЏ <i style={{ width: `${hud.battery}%` }} /></label>
-          <label>РЎС‚СЂР°С… <i style={{ width: `${hud.fear}%` }} /></label>
+          <label>Health <i style={{ width: `${hud.health}%` }} /></label>
+          <label>Battery <i style={{ width: `${hud.battery}%` }} /></label>
+          <label>Fear <i style={{ width: `${hud.fear}%` }} /></label>
         </div>
       </section>}
 
       {settings.showHud && <aside className="quest-log">
-        <b>РљРІРµСЃС‚С‹</b>
-        <span className={hud.tasks.phone ? 'done' : ''}>E: РѕС‚РІРµС‚РёС‚СЊ РЅР° С‚РµР»РµС„РѕРЅ</span>
-        <span className={hud.tasks.cashier ? 'done' : ''}>РћР±СЃР»СѓР¶РёС‚СЊ РєР»РёРµРЅС‚РѕРІ: {hud.served}/8</span>
-        <span className={hud.tasks.stock ? 'done' : ''}>РџРѕРїРѕР»РЅРёС‚СЊ РїРѕР»РєРё: {hud.stocked}/18</span>
-        <span className={hud.tasks.trash ? 'done' : ''}>РЎРѕР±СЂР°С‚СЊ РјСѓСЃРѕСЂ: {hud.trash}/3</span>
-        <span className={hud.tasks.cameras ? 'done' : ''}>РџРѕСЃРјРѕС‚СЂРµС‚СЊ РєР°РјРµСЂС‹</span>
-        <span className={hud.tasks.bandits ? 'done' : ''}>РћС‚Р±РёС‚СЊСЃСЏ РѕС‚ Р±Р°РЅРґРёС‚РѕРІ</span>
-        <span className={hud.tasks.outside ? 'done' : ''}>Р’С‹РЅРµСЃС‚Рё РјСѓСЃРѕСЂ РЅР°СЂСѓР¶Сѓ</span>
+        <b>Tasks</b>
+        <span className={hud.tasks.phone ? 'done' : ''}>E: answer red phone at checkout</span>
+        <span className={hud.tasks.cashier ? 'done' : ''}>Serve customers: {hud.served}/8</span>
+        <span className={hud.tasks.stock ? 'done' : ''}>Restock shelves: {hud.stocked}/18</span>
+        <span className={hud.tasks.trash ? 'done' : ''}>Collect trash: {hud.trash}/3</span>
+        <span className={hud.tasks.cameras ? 'done' : ''}>Check security cameras</span>
+        <span className={hud.tasks.bandits ? 'done' : ''}>Fight off bandits</span>
+        <span className={hud.tasks.outside ? 'done' : ''}>Take trash outside</span>
       </aside>}
 
       {settings.showHud && <div className="controls-note">
-        WASD - С…РѕРґСЊР±Р° В· Shift - Р±РµРі В· РјС‹С€СЊ - РѕР±Р·РѕСЂ В· E - РґРµР№СЃС‚РІРёРµ В· Q - С„РѕРЅР°СЂРёРє В· Esc - РјРµРЅСЋ
-        {!hud.locked && hud.phase !== 'menu' ? <strong>РљР»РёРєРЅРё РїРѕ РёРіСЂРµ, С‡С‚РѕР±С‹ Р·Р°С…РІР°С‚РёС‚СЊ РјС‹С€СЊ</strong> : null}
+        WASD - move · Shift - run · Mouse - look · E - interact · Q - flashlight · Esc - menu
+        {hud.phase === 'dead' ? <strong>Press E to respawn near the automatic doors</strong> : null}
+        {!hud.locked && hud.phase !== 'menu' && hud.phase !== 'dead' ? <strong>Click the game to lock mouse</strong> : null}
       </div>}
+
+      {hud.phase === 'dead' && (
+        <section className="death-screen">
+          <h2>You died</h2>
+          <p>The monster dragged you away from the dumpsters. Respawn near the store doors and try the outside route again.</p>
+          <button type="button" onClick={interact}>Respawn</button>
+          <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', health: 100, fear: 0 })}>Main menu</button>
+        </section>
+      )}
 
       {settings.mobileControls && hud.phase !== 'menu' && (
         <div className="mobile-controls">
