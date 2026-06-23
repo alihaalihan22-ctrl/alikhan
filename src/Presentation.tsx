@@ -43,6 +43,12 @@ const slides = [
     text: 'Scan the QR code, open the game, create a room, invite a friend, and try to finish the shift before the dumpster wakes up.',
     type: 'qr',
   },
+  {
+    kicker: 'Slide 06',
+    title: 'Latest Update',
+    text: 'The newest version adds cleaner lighting, a real reflective mirror, a stronger supermarket mood, safer respawn logic, and more polish for the final release.',
+    type: 'update',
+  },
 ] as const;
 
 function StoreScene() {
@@ -55,7 +61,6 @@ function StoreScene() {
       <i className="store-light two" />
       <i className="store-light three" />
       <i className="store-fog" />
-      <i className="store-shadow" />
     </div>
   );
 }
@@ -170,6 +175,18 @@ export default function Presentation() {
             <div className="qr-card">
               <img src={qrUrl} alt="QR code to Shesterochka Horror" />
               <strong>{gameUrl}</strong>
+            </div>
+          )}
+          {slide.type === 'update' && (
+            <div className="update-card">
+              <span>vNext</span>
+              <strong>Mirror + Atmosphere</strong>
+              <ul>
+                <li>Black shadow removed</li>
+                <li>Reflective mirror inside the store</li>
+                <li>Cleaner light and horror mood</li>
+                <li>Ready for more realistic props</li>
+              </ul>
             </div>
           )}
         </div>

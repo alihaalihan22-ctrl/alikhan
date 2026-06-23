@@ -1065,6 +1065,8 @@ export default function App() {
     outsideLights: THREE.PointLight[];
     rain: THREE.Group;
     outsideShadow: THREE.Group;
+    mirrorCamera: THREE.CubeCamera;
+    mirrorSurface: THREE.Mesh;
     storeLight: THREE.PointLight;
     hemi: THREE.HemisphereLight;
     lastStepAt: number;
@@ -1578,6 +1580,33 @@ export default function App() {
     addWall(box(0.3, 4, 34, 0x3e4448, [-18, 2, 0]));
     addWall(box(0.3, 4, 24, 0x3e4448, [18, 2, -5]));
 
+    const mirrorTarget = new THREE.WebGLCubeRenderTarget(256);
+    mirrorTarget.texture.colorSpace = THREE.SRGBColorSpace;
+    const mirrorCamera = new THREE.CubeCamera(0.12, 80, mirrorTarget);
+    mirrorCamera.position.set(-17.72, 1.72, 5.2);
+    scene.add(mirrorCamera);
+    const mirrorFrame = box(0.12, 2.25, 3.75, 0x9aa8ad, [-17.88, 1.72, 5.2]);
+    const mirrorSurface = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.25, 1.72),
+      new THREE.MeshPhysicalMaterial({
+        color: 0xe8f6ff,
+        roughness: 0.015,
+        metalness: 0.82,
+        envMap: mirrorTarget.texture,
+        clearcoat: 1,
+        clearcoatRoughness: 0.01,
+        transparent: true,
+        opacity: 0.78,
+      }),
+    );
+    mirrorSurface.position.set(-17.8, 1.72, 5.2);
+    mirrorSurface.rotation.y = Math.PI / 2;
+    mirrorSurface.castShadow = false;
+    mirrorSurface.receiveShadow = false;
+    const mirrorGlow = new THREE.PointLight(0xb8e7ff, 0.45, 5.4);
+    mirrorGlow.position.set(-15.9, 2.1, 5.2);
+    scene.add(mirrorFrame, mirrorSurface, mirrorGlow);
+
     const glassDoorMat = new THREE.MeshPhysicalMaterial({
       color: 0xb8e7ff,
       roughness: 0.02,
@@ -1884,7 +1913,8 @@ export default function App() {
     scene.add(rain);
     const outsideShadow = makeShadowFigure();
     outsideShadow.position.set(-15.5, 0, 46);
-    scene.add(outsideShadow);
+    outsideShadow.visible = false;
+    outsideShadow.userData.disabled = true;
     const lamp1 = new THREE.PointLight(0xffd37b, 0, 22);
     lamp1.position.set(-8, 6, 30);
     const lamp2 = new THREE.PointLight(0xffd37b, 0, 22);
@@ -1989,6 +2019,8 @@ export default function App() {
       outsideLights,
       rain,
       outsideShadow,
+      mirrorCamera,
+      mirrorSurface,
       storeLight,
       hemi,
       lastStepAt: 0,
@@ -2362,12 +2394,12 @@ export default function App() {
             drop.position.z = 22 + Math.random() * 36;
           }
         });
-        if (state.outsideShadow.visible) {
+        if (!state.outsideShadow.userData.disabled && state.outsideShadow.visible) {
           state.outsideShadow.lookAt(state.camera.position.x, 1.7, state.camera.position.z);
           if (state.clock.elapsedTime > Number(state.outsideShadow.userData.hideAt ?? 0) || state.outsideShadow.position.distanceTo(state.camera.position) < 5) {
             state.outsideShadow.visible = false;
           }
-        } else if (Math.random() < delta * 0.018 && !current.screamer) {
+        } else if (!state.outsideShadow.userData.disabled && Math.random() < delta * 0.018 && !current.screamer) {
           const spots = [
             new THREE.Vector3(-16.2, 0, 45.5),
             new THREE.Vector3(16.2, 0, 44.5),
@@ -2530,6 +2562,10 @@ export default function App() {
         scare('screamer-trash3d');
       }
 
+      state.mirrorSurface.visible = false;
+      state.mirrorCamera.position.copy(state.mirrorSurface.position);
+      state.mirrorCamera.update(renderer, scene);
+      state.mirrorSurface.visible = true;
       renderer.render(scene, camera);
     };
     animate();
