@@ -85,6 +85,8 @@ type FridgeUnit = {
 };
 
 const productNames = ['Pepsi', 'Fanta', 'Вода', 'Чипсы', 'Бургер', 'Хот-дог', 'Корн-дог', 'Шоколадка', 'Печенье', 'Овощи', 'Фрукты', 'Мороженое'];
+const productColors = [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8b33a, 0x8d4b22, 0xe7422f, 0xf4f2d7, 0x48a64b, 0xd8f4ff, 0x4aa64d, 0xd84032, 0xf3e8ff];
+const productColorFor = (name: string) => productColors[Math.max(0, productNames.indexOf(name)) % productColors.length];
 const cashierSkins: CashierSkin[] = [
   {
     id: 'uniform',
@@ -261,6 +263,28 @@ function makeProduct(name: string, color: number) {
     const pack = box(0.32, 0.42, 0.24, color, [0, 0.22, 0]);
     group.add(pack);
   }
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return group;
+}
+
+function makeShelfSlotMarker(requiredProduct: string, pos: THREE.Vector3) {
+  const group = new THREE.Group();
+  const trayMat = new THREE.MeshStandardMaterial({ color: 0x30383c, roughness: 0.5, metalness: 0.55 });
+  const stripMat = new THREE.MeshStandardMaterial({ color: productColorFor(requiredProduct), roughness: 0.46, metalness: 0.08 });
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.035, 0.48), trayMat);
+  const backStop = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.18, 0.035), trayMat);
+  const colorStrip = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.045, 0.035), stripMat);
+  tray.position.set(0, -0.02, 0);
+  backStop.position.set(0, 0.08, 0.25);
+  colorStrip.position.set(0, 0.08, -0.25);
+  group.add(tray, backStop, colorStrip);
+  group.position.copy(pos);
+  group.userData.requiredProduct = requiredProduct;
   group.traverse((child) => {
     if (child instanceof THREE.Mesh) {
       child.castShadow = true;
@@ -1393,19 +1417,24 @@ export default function App() {
 
     const stockRoomFloor = box(8, 0.04, 8, 0x47433d, [-14, 0.02, -2]);
     const stockRoomSign = box(2.2, 0.45, 0.08, 0x1e2428, [-17.82, 2.35, -2]);
-    const stockRoomCrates = [
-      box(1.2, 1.0, 1.2, 0x8a5a2b, [-15.5, 0.5, -4.6]),
-      box(1.2, 1.0, 1.2, 0x8a5a2b, [-13.9, 0.5, -4.6]),
-      box(1.2, 1.0, 1.2, 0x8a5a2b, [-12.3, 0.5, -4.6]),
-      box(1.2, 1.0, 1.2, 0x76502a, [-15.5, 0.5, -2.9]),
-      box(1.2, 1.0, 1.2, 0x76502a, [-13.9, 0.5, -2.9]),
-      box(1.2, 1.0, 1.2, 0x76502a, [-12.3, 0.5, -2.9]),
-    ];
+    const stockRoomCrates = productNames.map((productName, index) => {
+      const column = index % 4;
+      const row = Math.floor(index / 4);
+      const crate = box(1.06, 0.82, 1.06, row % 2 === 0 ? 0x8a5a2b : 0x76502a, [-15.75 + column * 1.36, 0.41, -5.05 + row * 1.32]);
+      const tape = new THREE.Mesh(
+        new THREE.BoxGeometry(0.92, 0.035, 1.08),
+        new THREE.MeshStandardMaterial({ color: productColorFor(productName), roughness: 0.52, metalness: 0.04 }),
+      );
+      tape.position.copy(crate.position).add(new THREE.Vector3(0, 0.43, 0));
+      tape.userData.kind = 'stockCrateTape';
+      scene.add(tape);
+      return crate;
+    });
     stockRoomCrates.forEach((crate, index) => {
-      const productName = productNames[(index * 2) % productNames.length];
+      const productName = productNames[index % productNames.length];
       crate.userData.kind = 'stockCrate';
       crate.userData.product = productName;
-      const sample = makeProduct(productName, [0x1b4fff, 0xff7d19, 0x85d9ff, 0xf0d23c, 0xe7422f, 0x48a64b][index % 6]);
+      const sample = makeProduct(productName, productColorFor(productName));
       sample.position.copy(crate.position).add(new THREE.Vector3(0, 0.66, -0.08));
       sample.scale.setScalar(0.52);
       sample.userData.crateSample = true;
@@ -1452,13 +1481,18 @@ export default function App() {
       scene.add(shelf);
       colliders.push(new THREE.Box3().setFromObject(shelf));
       for (let i = 0; i < 7; i += 1) {
-        const productColor = [0x1b4fff, 0xff7d19, 0x85d9ff, 0xf0d23c, 0x8d4b22, 0xe7422f, 0xf4f2d7, 0x48a64b, 0xd8f4ff][(i + shelfIndex) % productNames.length];
-        const product = makeProduct(productNames[(i + shelfIndex) % productNames.length], productColor);
+        const requiredProduct = productNames[(i + shelfIndex) % productNames.length];
+        const product = makeProduct(requiredProduct, productColorFor(requiredProduct));
         product.position.set(x, 0.42 + (i % 3) * 0.62, -7 + Math.floor(i / 3) * 2.1);
         product.scale.setScalar(0.82);
         product.visible = shelfIndex < 2;
         product.userData.initialVisible = product.visible;
-        product.userData.product = productNames[(i + shelfIndex) % productNames.length];
+        product.userData.product = requiredProduct;
+        product.userData.requiredProduct = requiredProduct;
+        const slotMarker = makeShelfSlotMarker(requiredProduct, product.position.clone());
+        slotMarker.visible = !product.visible;
+        product.userData.slotMarker = slotMarker;
+        scene.add(slotMarker);
         scene.add(product);
         stockObjects.push(product);
       }
@@ -2177,7 +2211,11 @@ export default function App() {
       trashDelivered: 0,
     });
     state.camera.position.set(0, 1.7, 14);
-    state.stockObjects.forEach((item) => { item.visible = Boolean(item.userData.initialVisible); });
+    state.stockObjects.forEach((item) => {
+      item.visible = Boolean(item.userData.initialVisible);
+      const marker = item.userData.slotMarker as THREE.Object3D | undefined;
+      if (marker) marker.visible = !item.visible;
+    });
     state.trashObjects.forEach((item) => { item.visible = true; });
     state.customers.forEach((customer) => {
       customer.stage = 'waiting';
@@ -2340,6 +2378,10 @@ export default function App() {
       });
       return;
     }
+    if (stockCrate && current.heldItem) {
+      patchHud({ message: `Руки заняты: ${current.heldItem}. Сначала положи товар на нужную полку, в корзину или тележку.` });
+      return;
+    }
 
     const bandit = state.bandits.find((item) => item.active && item.health > 0 && item.mesh.position.distanceTo(pos) < 2.4);
     if (bandit) {
@@ -2358,6 +2400,8 @@ export default function App() {
     if (visibleProduct && !current.heldItem) {
       const productName = String(visibleProduct.userData.product ?? 'товар');
       visibleProduct.visible = false;
+      const marker = visibleProduct.userData.slotMarker as THREE.Object3D | undefined;
+      if (marker) marker.visible = true;
       patchHud({
         heldItem: productName,
         heldItemFromStock: false,
@@ -2389,10 +2433,12 @@ export default function App() {
       if (customer.weird) scare('screamer-longneck');
       return;
     }
-    const hiddenProduct = state.stockObjects.find((item) => !item.visible && item.position.distanceTo(pos) < 5.5);
-    if (hiddenProduct && current.heldItem && current.heldItemFromStock) {
-      hiddenProduct.userData.product = current.heldItem;
-      hiddenProduct.visible = true;
+    const nearbyEmptySlots = state.stockObjects.filter((item) => !item.visible && item.position.distanceTo(pos) < 5.5);
+    const matchingSlot = nearbyEmptySlots.find((item) => item.userData.requiredProduct === current.heldItem);
+    if (matchingSlot && current.heldItem && current.heldItemFromStock) {
+      matchingSlot.visible = true;
+      const marker = matchingSlot.userData.slotMarker as THREE.Object3D | undefined;
+      if (marker) marker.visible = false;
       const stocked = current.stocked + 1;
       patchHud({
         stocked,
@@ -2404,8 +2450,18 @@ export default function App() {
       if (stocked >= 18) completeTask('stock');
       return;
     }
-    if (hiddenProduct && current.heldItem && !current.heldItemFromStock) {
+    if (nearbyEmptySlots.length > 0 && current.heldItem && current.heldItemFromStock) {
+      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'нужный товар');
+      patchHud({ message: `Эта полка ждет другой товар: ${required}. Возьми правильную коробку на складе.` });
+      return;
+    }
+    if (nearbyEmptySlots.length > 0 && current.heldItem && !current.heldItemFromStock) {
       patchHud({ message: 'Этим нельзя пополнить полку. Возьми новый товар из коробки на складе.' });
+      return;
+    }
+    if (nearbyEmptySlots.length > 0 && !current.heldItem) {
+      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'товар');
+      patchHud({ message: `Пустое место на полке. Нужен товар из коробки: ${required}.` });
       return;
     }
     if (current.phase === 'outside' && current.heldItem === 'Trash bag' && near(state.dumpster, 5.5)) {
