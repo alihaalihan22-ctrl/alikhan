@@ -21,6 +21,7 @@ type Hud = {
   cameraOpen: boolean;
   screamer: string | null;
   heldItem: string | null;
+  heldItemFromStock: boolean;
   inventory: number;
   outsideFinal: boolean;
   trashDelivered: number;
@@ -711,7 +712,6 @@ function makeMetalShelf(pos: [number, number, number]) {
   const group = new THREE.Group();
   const metal = new THREE.MeshStandardMaterial({ color: 0x9ba3a7, metalness: 0.86, roughness: 0.24 });
   const darkMetal = new THREE.MeshStandardMaterial({ color: 0x4f575c, metalness: 0.9, roughness: 0.2 });
-  const priceMat = new THREE.MeshStandardMaterial({ color: 0xffd64d, roughness: 0.36, metalness: 0.02 });
 
   [-0.48, 0.48].forEach((x) => [-5.1, 5.1].forEach((z) => {
     const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.35, 0.12), darkMetal);
@@ -728,13 +728,9 @@ function makeMetalShelf(pos: [number, number, number]) {
       rail.position.set(x, y + 0.1, 0);
       group.add(rail);
     });
-    [-4.3, -2.15, 0, 2.15, 4.3].forEach((z, index) => {
-      const price = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.13, 0.025), priceMat);
-      price.position.set(-0.61, y + 0.19, z);
-      price.rotation.y = -0.04;
-      price.userData.priceTag = index;
-      group.add(price);
-    });
+    const labelRail = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, 10.6), darkMetal);
+    labelRail.position.set(-0.62, y + 0.2, 0);
+    group.add(labelRail);
   });
 
   [-4, -2, 0, 2, 4].forEach((z) => {
@@ -930,6 +926,7 @@ export default function App() {
     outsideColliders: THREE.Box3[];
     trashObjects: THREE.Object3D[];
     stockObjects: THREE.Object3D[];
+    stockCrates: THREE.Object3D[];
     carts: THREE.Object3D[];
     fridges: FridgeUnit[];
     cashierView: THREE.Group;
@@ -968,6 +965,7 @@ export default function App() {
     cameraOpen: false,
     screamer: null,
     heldItem: null,
+    heldItemFromStock: false,
     inventory: 0,
     outsideFinal: false,
     trashDelivered: 0,
@@ -1399,7 +1397,20 @@ export default function App() {
       box(1.2, 1.0, 1.2, 0x8a5a2b, [-15.5, 0.5, -4.6]),
       box(1.2, 1.0, 1.2, 0x8a5a2b, [-13.9, 0.5, -4.6]),
       box(1.2, 1.0, 1.2, 0x8a5a2b, [-12.3, 0.5, -4.6]),
+      box(1.2, 1.0, 1.2, 0x76502a, [-15.5, 0.5, -2.9]),
+      box(1.2, 1.0, 1.2, 0x76502a, [-13.9, 0.5, -2.9]),
+      box(1.2, 1.0, 1.2, 0x76502a, [-12.3, 0.5, -2.9]),
     ];
+    stockRoomCrates.forEach((crate, index) => {
+      const productName = productNames[(index * 2) % productNames.length];
+      crate.userData.kind = 'stockCrate';
+      crate.userData.product = productName;
+      const sample = makeProduct(productName, [0x1b4fff, 0xff7d19, 0x85d9ff, 0xf0d23c, 0xe7422f, 0x48a64b][index % 6]);
+      sample.position.copy(crate.position).add(new THREE.Vector3(0, 0.66, -0.08));
+      sample.scale.setScalar(0.52);
+      sample.userData.crateSample = true;
+      scene.add(sample);
+    });
     scene.add(stockRoomFloor, stockRoomSign, ...stockRoomCrates);
     stockRoomCrates.forEach((crate) => colliders.push(new THREE.Box3().setFromObject(crate)));
 
@@ -1656,6 +1667,7 @@ export default function App() {
       outsideColliders,
       trashObjects,
       stockObjects,
+      stockCrates: stockRoomCrates,
       carts,
       fridges,
       cashierView,
@@ -2159,6 +2171,7 @@ export default function App() {
       health: 100,
       battery: 100,
       heldItem: null,
+      heldItemFromStock: false,
       inventory: 0,
       outsideFinal: false,
       trashDelivered: 0,
@@ -2300,6 +2313,7 @@ export default function App() {
         cart.userData.items = Number(cart.userData.items ?? 0) + 1;
         patchHud({
           heldItem: null,
+          heldItemFromStock: false,
           message: `${current.heldItem} лежит в ${cart.userData.kind === 'basket' ? 'корзине' : 'тележке'}. Внутри товаров: ${cart.userData.items}.`,
         });
         return;
@@ -2311,6 +2325,18 @@ export default function App() {
         message: nextFollow
           ? cart.userData.kind === 'basket' ? 'Ты взял ручную корзину. Она держится перед тобой.' : 'Ты взял тележку. Она катится перед тобой.'
           : cart.userData.kind === 'basket' ? 'Ты поставил корзину.' : 'Ты отпустил тележку.',
+      });
+      return;
+    }
+
+    const stockCrate = state.stockCrates.find((item) => item.position.distanceTo(pos) < 2.4);
+    if (stockCrate && !current.heldItem) {
+      const productName = String(stockCrate.userData.product ?? productNames[0]);
+      patchHud({
+        heldItem: productName,
+        heldItemFromStock: true,
+        inventory: current.inventory + 1,
+        message: `Ты взял из коробки: ${productName}. Отнеси товар к пустому месту на полке и нажми E.`,
       });
       return;
     }
@@ -2334,8 +2360,9 @@ export default function App() {
       visibleProduct.visible = false;
       patchHud({
         heldItem: productName,
+        heldItemFromStock: false,
         inventory: current.inventory + 1,
-        message: `Ты взял товар: ${productName}. Его можно положить в тележку или вернуть на пустую полку.`,
+        message: `Ты взял товар с полки: ${productName}. Это для корзины/тележки. Для пополнения бери товар из коробок на складе.`,
       });
       return;
     }
@@ -2363,22 +2390,29 @@ export default function App() {
       return;
     }
     const hiddenProduct = state.stockObjects.find((item) => !item.visible && item.position.distanceTo(pos) < 5.5);
-    if (hiddenProduct && current.heldItem) {
+    if (hiddenProduct && current.heldItem && current.heldItemFromStock) {
+      hiddenProduct.userData.product = current.heldItem;
       hiddenProduct.visible = true;
       const stocked = current.stocked + 1;
       patchHud({
         stocked,
         heldItem: null,
-        message: `Полка пополнена: ${hiddenProduct.userData.product}.`,
+        heldItemFromStock: false,
+        message: `Полка пополнена товаром из коробки: ${current.heldItem}.`,
       });
       if (stocked === 2 || stocked === 7 || stocked === 13) scare('screamer-grin');
       if (stocked >= 18) completeTask('stock');
+      return;
+    }
+    if (hiddenProduct && current.heldItem && !current.heldItemFromStock) {
+      patchHud({ message: 'Этим нельзя пополнить полку. Возьми новый товар из коробки на складе.' });
       return;
     }
     if (current.phase === 'outside' && current.heldItem === 'Trash bag' && near(state.dumpster, 5.5)) {
       const delivered = current.trashDelivered + 1;
       patchHud({
         heldItem: null,
+        heldItemFromStock: false,
         trashDelivered: delivered,
         outsideFinal: true,
         fear: clamp(current.fear + 22, 0, 100),
@@ -2401,9 +2435,12 @@ export default function App() {
       }
       trash.visible = false;
       const count = current.trash + 1;
-      patchHud({ trash: count, heldItem: 'Trash bag', message: 'You picked up a heavy trash bag. Carry it outside to the dumpster.' });
-      patchHud({ trash: count, message: 'Мусор собран. Пакет будто тяжелее, чем должен быть.' });
-      patchHud({ trash: count, heldItem: 'Trash bag', message: 'You picked up a heavy trash bag. Carry it outside to the dumpster.' });
+      patchHud({
+        trash: count,
+        heldItem: 'Trash bag',
+        heldItemFromStock: false,
+        message: 'Ты поднял тяжелый мусорный пакет. Неси его наружу к контейнеру.',
+      });
       if (count === 1) scare('screamer-dust');
       if (count >= state.trashObjects.length) completeTask('trash');
       return;
