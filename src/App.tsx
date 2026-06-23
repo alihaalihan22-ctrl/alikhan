@@ -967,8 +967,13 @@ export default function App() {
     outsideLights: THREE.PointLight[];
     rain: THREE.Group;
     outsideShadow: THREE.Group;
+    storeLight: THREE.PointLight;
+    hemi: THREE.HemisphereLight;
     lastStepAt: number;
     lastDropAt: number;
+    lastWhisperAt: number;
+    lastBreathAt: number;
+    lastNightEventAt: number;
     audio?: AudioContext;
     wind?: OscillatorNode;
   } | null>(null);
@@ -1267,6 +1272,51 @@ export default function App() {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.44);
+  };
+
+  const playWhisperSound = () => {
+    const ctx = engine.current?.audio;
+    if (!ctx) return;
+    const noise = ctx.createBufferSource();
+    const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.75, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    filter.type = 'bandpass';
+    filter.frequency.value = 620 + Math.random() * 340;
+    filter.Q.value = 8;
+    gain.gain.value = 0.001;
+    gain.gain.exponentialRampToValueAtTime(0.075 * (settingsRef.current.volume / 100), ctx.currentTime + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.78);
+    noise.buffer = buffer;
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start();
+  };
+
+  const playHeartbeatSound = () => {
+    const ctx = engine.current?.audio;
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(58, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(34, ctx.currentTime + 0.18);
+    filter.type = 'lowpass';
+    filter.frequency.value = 240;
+    gain.gain.value = 0.001;
+    gain.gain.exponentialRampToValueAtTime(0.1 * (settingsRef.current.volume / 100), ctx.currentTime + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
   };
 
   useEffect(() => {
@@ -1718,8 +1768,13 @@ export default function App() {
       outsideLights,
       rain,
       outsideShadow,
+      storeLight,
+      hemi,
       lastStepAt: 0,
       lastDropAt: 0,
+      lastWhisperAt: 0,
+      lastBreathAt: 0,
+      lastNightEventAt: 0,
     };
 
     const animate = () => {
@@ -1815,6 +1870,35 @@ export default function App() {
       state.autoDoorLeft.position.z += (leftTarget - state.autoDoorLeft.position.z) * Math.min(1, delta * 7);
       state.autoDoorRight.position.z += (rightTarget - state.autoDoorRight.position.z) * Math.min(1, delta * 7);
 
+      const completedTasks = Object.values(current.tasks).filter(Boolean).length;
+      const nightPressure = clamp(
+        completedTasks * 0.1 + current.served * 0.025 + current.stocked * 0.012 + current.fear * 0.006,
+        0,
+        1,
+      );
+      if (current.phase === 'shift' || current.phase === 'armed') {
+        const pulse = Math.sin(state.clock.elapsedTime * (1.2 + nightPressure * 2.4)) * 0.22 * nightPressure;
+        state.storeLight.intensity += ((4.2 - nightPressure * 1.35 + pulse) - state.storeLight.intensity) * Math.min(1, delta * 2.4);
+        state.hemi.intensity += ((0.95 - nightPressure * 0.35) - state.hemi.intensity) * Math.min(1, delta * 1.2);
+        state.scene.fog = new THREE.FogExp2(0x050607, 0.026 + nightPressure * 0.012);
+        if (state.audio && nightPressure > 0.18 && state.clock.elapsedTime - state.lastWhisperAt > 13 - nightPressure * 6) {
+          state.lastWhisperAt = state.clock.elapsedTime;
+          playWhisperSound();
+          if (!current.screamer && Math.random() < 0.55) {
+            patchHud({
+              fear: clamp(current.fear + 3 + nightPressure * 5, 0, 100),
+              message: nightPressure > 0.55
+                ? 'Из дальней линии полок донесся шепот: он назвал твое имя и номер кассы.'
+                : 'Между стеллажами прошел тихий шорох, хотя клиентов рядом нет.',
+            });
+          }
+        }
+        if (state.audio && nightPressure > 0.42 && state.clock.elapsedTime - state.lastBreathAt > 9) {
+          state.lastBreathAt = state.clock.elapsedTime;
+          playHeartbeatSound();
+        }
+      }
+
       const atExitThreshold =
         current.phase !== 'menu' &&
         current.phase !== 'outside' &&
@@ -1892,6 +1976,30 @@ export default function App() {
             });
             angrySound();
             if (served >= state.customers.length) completeTask('cashier');
+            return;
+          }
+        }
+        if (
+          customer.weird &&
+          customer.mesh.visible &&
+          (customer.stage === 'browse' || customer.stage === 'checkout') &&
+          customer.mesh.position.distanceTo(state.camera.position) < 8
+        ) {
+          const stareUntil = Number(customer.mesh.userData.stareUntil ?? 0);
+          const nextStareAt = Number(customer.mesh.userData.nextStareAt ?? 0);
+          if (state.clock.elapsedTime < stareUntil) {
+            customer.mesh.lookAt(state.camera.position.x, 1.55, state.camera.position.z);
+            customer.mood = 'afraid';
+            return;
+          }
+          if (state.clock.elapsedTime > nextStareAt && Math.random() < delta * (0.16 + nightPressure * 0.28)) {
+            customer.mesh.userData.stareUntil = state.clock.elapsedTime + 1.2 + nightPressure * 1.4;
+            customer.mesh.userData.nextStareAt = state.clock.elapsedTime + 8 + Math.random() * 8;
+            playWhisperSound();
+            patchHud({
+              fear: clamp(current.fear + 4 + nightPressure * 8, 0, 100),
+              message: 'Странный клиент перестал идти и повернул голову за тобой. Тело осталось смотреть в другую сторону.',
+            });
             return;
           }
         }
@@ -2084,13 +2192,13 @@ export default function App() {
         scare('screamer-grin');
       }
 
-      if (Math.random() < delta * 0.05 && current.phase === 'shift') {
-        storeLight.intensity = storeLight.intensity > 1 ? 0.95 : 2.4;
-        patchHud({ message: 'Свет моргнул. За спиной прозвучали шаги.' });
+      if (Math.random() < delta * (0.025 + nightPressure * 0.065) && current.phase === 'shift') {
+        state.storeLight.intensity = state.storeLight.intensity > 1 ? 0.85 : 2.4;
+        patchHud({ message: nightPressure > 0.55 ? 'Свет провалился почти до темноты. За спиной кто-то сделал два быстрых шага.' : 'Свет моргнул. За спиной прозвучали шаги.' });
       }
 
       if (
-        Math.random() < delta * 0.025 &&
+        Math.random() < delta * (0.014 + nightPressure * 0.045) &&
         current.phase === 'shift' &&
         current.served >= 1 &&
         state.clock.elapsedTime - state.lastDropAt > 10
@@ -2118,13 +2226,13 @@ export default function App() {
         }
       }
 
-      if (Math.random() < delta * 0.006 && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
+      if (Math.random() < delta * (0.003 + nightPressure * 0.014) && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
         patchHud({ message: 'На секунду в стекле холодильника появилось лицо.' });
         scare('screamer-mask');
       }
 
       if (
-        Math.random() < delta * 0.012 &&
+        Math.random() < delta * (0.006 + nightPressure * 0.025) &&
         current.phase === 'shift' &&
         !current.screamer &&
         state.customers.some((customer) => customer.weird && customer.mesh.visible && customer.mesh.position.distanceTo(state.camera.position) < 5)
@@ -2137,7 +2245,7 @@ export default function App() {
       }
 
       if (
-        Math.random() < delta * 0.01 &&
+        Math.random() < delta * (0.006 + nightPressure * 0.018) &&
         current.phase === 'shift' &&
         !current.screamer &&
         state.monster.mood === 'watching'
@@ -2228,6 +2336,8 @@ export default function App() {
       customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
       customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
       customer.mesh.userData.carryingProduct = false;
+      customer.mesh.userData.stareUntil = 0;
+      customer.mesh.userData.nextStareAt = 0;
     });
     state.carts.forEach((item) => {
       item.userData.follow = false;
@@ -2241,6 +2351,12 @@ export default function App() {
     state.monster.emerging = 0;
     state.monster.active = false;
     state.monster.mood = 'hidden';
+    state.lastWhisperAt = 0;
+    state.lastBreathAt = 0;
+    state.lastNightEventAt = 0;
+    state.lastDropAt = 0;
+    state.storeLight.intensity = 4.2;
+    state.hemi.intensity = 0.95;
     state.renderer.domElement.focus();
     state.controls.lock();
     startAudio();
