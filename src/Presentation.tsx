@@ -98,7 +98,7 @@ function DemoPlayer() {
   return (
     <div className="demo-player real-game-video">
       <video
-        src={`${import.meta.env.BASE_URL}assets/game-demo.webm`}
+        src={`${import.meta.env.BASE_URL}assets/game-demo-20.webm`}
         controls
         autoPlay
         muted
