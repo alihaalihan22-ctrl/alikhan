@@ -16,31 +16,31 @@ const slides = [
   {
     kicker: 'Slide 01',
     title: 'Алихан Сулейменов',
-    text: 'Маленький факт: я создаю собственный 3D-хоррор и люблю добавлять в игру атмосферу, звук, монстров и настоящие игровые задания.',
+    text: 'Я создаю 3D-хоррор про ночную смену кассира и люблю делать игры, где обычное место постепенно становится опасным.',
     type: 'intro',
   },
   {
     kicker: 'Slide 02',
     title: 'Шестерачка Horror',
-    text: 'Реалистичный first-person horror про ночную смену кассира, где обычный супермаркет постепенно превращается в место охоты монстра.',
+    text: 'First-person indie horror: игрок работает ночью в супермаркете, обслуживает клиентов, пополняет полки, смотрит камеры и пытается пережить финальную погоню.',
     type: 'app',
   },
   {
     kicker: 'Slide 03',
-    title: 'Скриншоты из игры',
-    text: 'Касса, склад, полки, камеры, парковка и зона мусорных контейнеров работают как части одной ночной смены.',
+    title: 'Что есть в игре',
+    text: '3D-магазин, клиенты с товарами, холодильники, касса, склад, камеры, мусорная зона, монстр, скримеры, мобильное управление и онлайн-комната.',
     type: 'screens',
   },
   {
     kicker: 'Slide 04',
     title: 'Video Demo',
-    text: 'Короткое видео из игрового стиля: ночной магазин, полки, клиент, мигающий свет и появление монстра.',
+    text: '20 секунд 3D-демо: проход по магазину, полки, клиент, камера наблюдения, свет и постепенное появление монстра.',
     type: 'demo',
   },
   {
     kicker: 'Slide 05',
     title: 'Играй сейчас',
-    text: 'Зайди в Шестерачка Horror и проверь, сможешь ли закончить ночную смену до того, как мусорка начнет дышать.',
+    text: 'Открой игру, создай комнату, пригласи друга и попробуй закончить смену до того, как контейнеры начнут двигаться.',
     type: 'qr',
   },
 ] as const;
@@ -80,7 +80,7 @@ function ScreenshotGrid() {
         <i className="shot-customer" />
       </figure>
       <figure>
-        <span className="shot-label">Склад</span>
+        <span className="shot-label">Онлайн-комната</span>
         <i className="shot-shelf" />
         <i className="shot-box a" />
         <i className="shot-box b" />
@@ -106,7 +106,7 @@ function DemoPlayer() {
         playsInline
         poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
       />
-      <span className="demo-caption">20 секунд игрового 3D-демо: полки, клиент, камеры, свет и появление монстра.</span>
+      <span className="demo-caption">20 секунд игрового 3D-демо с клиентом, камерами, светом и монстром.</span>
     </div>
   );
 }
@@ -140,8 +140,8 @@ export default function Presentation() {
             <div className="feature-line">
               <b>3D</b>
               <b>Horror</b>
-              <b>First Person</b>
-              <b>Night Shift</b>
+              <b>Online Room</b>
+              <b>Mobile</b>
             </div>
           )}
           {slide.type === 'qr' && (
@@ -156,7 +156,7 @@ export default function Presentation() {
             <div className="author-card">
               <i>AS</i>
               <strong>Game Developer</strong>
-              <small>3D horror, atmosphere, AI clients</small>
+              <small>3D horror, atmosphere, clients, multiplayer</small>
             </div>
           )}
           {slide.type === 'app' && (

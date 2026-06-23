@@ -142,6 +142,32 @@ button:disabled {
   min-width: 210px;
 }
 
+.room-field {
+  display: grid;
+  gap: 5px;
+  min-width: 210px;
+  color: rgba(255, 247, 239, .68);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.room-field input {
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #fff7ef;
+  background: rgba(8,10,12,.72);
+  outline: none;
+}
+
+.room-field input:focus {
+  border-color: rgba(255, 207, 108, .7);
+  box-shadow: 0 0 0 3px rgba(255, 207, 108, .12);
+}
+
 .guest-login-actions span {
   width: 100%;
   color: rgba(255, 247, 239, .74);
