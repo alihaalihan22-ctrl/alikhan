@@ -79,6 +79,9 @@ type MonsterAi = {
 };
 
 const assetUrl = (name: string) => `${import.meta.env.BASE_URL}assets/${name}.png`;
+const isMobileViewport = () =>
+  typeof window !== 'undefined' &&
+  (window.matchMedia('(max-width: 760px)').matches || (navigator.maxTouchPoints > 1 && window.innerWidth < 920));
 
 type BanditAi = {
   mesh: THREE.Group;
@@ -1056,7 +1059,7 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [settings, setSettings] = useState<GameSettings>({
-    graphics: 'high',
+    graphics: isMobileViewport() ? 'low' : 'high',
     volume: 80,
     sensitivity: 55,
     showHud: true,
@@ -1185,14 +1188,15 @@ export default function App() {
     settingsRef.current = settings;
     const state = engine.current;
     if (!state) return;
+    const mobile = isMobileViewport();
     state.renderer.setPixelRatio(
       settings.graphics === 'high'
-        ? Math.min(window.devicePixelRatio, 1.75)
+        ? Math.min(window.devicePixelRatio, mobile ? 1.1 : 1.75)
         : settings.graphics === 'medium'
-          ? Math.min(window.devicePixelRatio, 1.25)
-          : 1,
+          ? Math.min(window.devicePixelRatio, mobile ? 1 : 1.25)
+          : mobile ? 0.85 : 1,
     );
-    state.renderer.shadowMap.enabled = settings.graphics !== 'low';
+    state.renderer.shadowMap.enabled = settings.graphics !== 'low' && !mobile;
   }, [settings]);
 
   useEffect(() => {
@@ -1513,6 +1517,7 @@ export default function App() {
 
   useEffect(() => {
     if (!mountRef.current) return;
+    const mobileRuntime = isMobileViewport();
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050607);
@@ -1524,14 +1529,14 @@ export default function App() {
     const cashierView = makeCashierViewModel(cashierSkins.find((skin) => skin.id === equippedSkin) ?? defaultCashierSkin);
     camera.add(cashierView);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: !mobileRuntime, powerPreference: 'high-performance' });
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !mobileRuntime;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.18;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+    renderer.setPixelRatio(mobileRuntime ? Math.min(window.devicePixelRatio, 0.85) : Math.min(window.devicePixelRatio, 1.75));
     mountRef.current.appendChild(renderer.domElement);
 
     const controls = new PointerLockControls(camera, renderer.domElement);
@@ -1542,11 +1547,13 @@ export default function App() {
     scene.add(hemi);
     const storeLight = new THREE.PointLight(0xfff6d8, 4.2, 58);
     storeLight.position.set(0, 6, 0);
-    storeLight.castShadow = true;
-    storeLight.shadow.mapSize.set(1024, 1024);
+    storeLight.castShadow = !mobileRuntime;
+    storeLight.shadow.mapSize.set(mobileRuntime ? 256 : 1024, mobileRuntime ? 256 : 1024);
     scene.add(storeLight);
-    [-12, -6, 0, 6, 12].forEach((x) => {
-      [-11, -3, 5, 12].forEach((z) => {
+    const ceilingXs = mobileRuntime ? [-12, -2, 8] : [-12, -6, 0, 6, 12];
+    const ceilingZs = mobileRuntime ? [-10, 2, 12] : [-11, -3, 5, 12];
+    ceilingXs.forEach((x) => {
+      ceilingZs.forEach((z) => {
         const strip = new THREE.RectAreaLight(0xf7fbff, 4.2, 5.6, 0.62);
         strip.position.set(x, 3.85, z);
         strip.rotation.x = -Math.PI / 2;
@@ -1620,7 +1627,7 @@ export default function App() {
     addWall(box(0.3, 4, 34, 0x3e4448, [-18, 2, 0]));
     addWall(box(0.3, 4, 24, 0x3e4448, [18, 2, -5]));
 
-    const mirrorTarget = new THREE.WebGLCubeRenderTarget(256);
+    const mirrorTarget = new THREE.WebGLCubeRenderTarget(mobileRuntime ? 64 : 256);
     mirrorTarget.texture.colorSpace = THREE.SRGBColorSpace;
     const mirrorCamera = new THREE.CubeCamera(0.12, 80, mirrorTarget);
     mirrorCamera.position.set(-17.72, 1.72, 5.2);
@@ -2616,10 +2623,18 @@ export default function App() {
         scare('screamer-trash3d');
       }
 
-      state.mirrorSurface.visible = false;
-      state.mirrorCamera.position.copy(state.mirrorSurface.position);
-      state.mirrorCamera.update(renderer, scene);
-      state.mirrorSurface.visible = true;
+      const mirrorInterval = settingsRef.current.graphics === 'high' && !isMobileViewport()
+        ? 0.16
+        : settingsRef.current.graphics === 'medium'
+          ? 0.42
+          : 0.85;
+      if (state.clock.elapsedTime > Number(state.mirrorSurface.userData.nextUpdateAt ?? 0)) {
+        state.mirrorSurface.userData.nextUpdateAt = state.clock.elapsedTime + mirrorInterval;
+        state.mirrorSurface.visible = false;
+        state.mirrorCamera.position.copy(state.mirrorSurface.position);
+        state.mirrorCamera.update(renderer, scene);
+        state.mirrorSurface.visible = true;
+      }
       renderer.render(scene, camera);
     };
     animate();
