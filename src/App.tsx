@@ -186,15 +186,21 @@ const getSavedReviews = (): GameReview[] => {
 };
 
 const taskLabels: Record<TaskKey, string> = {
-  phone: 'answer the red security phone',
-  cashier: 'serve customers at checkout',
-  stock: 'restock empty shelves',
-  trash: 'collect trash bags',
-  cameras: 'check security cameras',
-  bandits: 'fight off bandits',
-  outside: 'take trash outside',
+  phone: 'ответить на красный телефон охраны',
+  cashier: 'обслужить клиентов на кассе',
+  stock: 'пополнить пустые полки',
+  trash: 'собрать мусорные пакеты',
+  cameras: 'проверить камеры охраны',
+  bandits: 'отбиться от бандитов',
+  outside: 'вынести мусор на улицу',
 };
 
+const checkoutTarget = () => new THREE.Vector3(-3 + Math.random() * 1.8, 0, 10.25 + Math.random() * 0.45);
+const customerExitRoute = () => [
+  new THREE.Vector3(5.5, 0, 10.25),
+  new THREE.Vector3(15.8, 0, 11.2),
+  new THREE.Vector3(20.8, 0, 12),
+];
 const customerWaypoints = [
   new THREE.Vector3(-15, 0, -13),
   new THREE.Vector3(-12, 0, 8),
@@ -205,6 +211,20 @@ const customerWaypoints = [
   new THREE.Vector3(13, 0, -13),
   new THREE.Vector3(14, 0, 6),
 ];
+
+function setCustomerRoute(customer: CustomerAi, route: THREE.Vector3[]) {
+  customer.mesh.userData.route = route.map((point) => point.clone());
+  const next = (customer.mesh.userData.route as THREE.Vector3[]).shift();
+  if (next) customer.target.copy(next);
+}
+
+function advanceCustomerRoute(customer: CustomerAi) {
+  const route = customer.mesh.userData.route as THREE.Vector3[] | undefined;
+  const next = route?.shift();
+  if (!next) return false;
+  customer.target.copy(next);
+  return true;
+}
 const initialTasks: Record<TaskKey, boolean> = {
   phone: false,
   cashier: false,
@@ -1140,7 +1160,7 @@ export default function App() {
   const [hud, setHud] = useState<Hud>({
     phase: 'menu',
     locked: false,
-    message: 'Shesterochka Horror: press start, then click the game to lock the mouse. Phone is on the red checkout counter.',
+    message: 'Шестёрочка Horror: нажми старт, затем кликни по игре. Телефон лежит на красной кассе.',
     ending: null,
     battery: 100,
     fear: 0,
@@ -2300,9 +2320,16 @@ export default function App() {
           customer.mood = customer.weird ? 'afraid' : 'searching';
           customer.mesh.visible = true;
           customer.mesh.position.copy(customer.mesh.userData.initialPosition as THREE.Vector3);
-          customer.target.copy(customer.spawnAt < 6 ? new THREE.Vector3(-3 + Math.random() * 2, 0, 10.2 + Math.random()) : customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
-          if (customer.spawnAt < 6) giveCustomerProduct(customer);
+          const shelfStop = customerWaypoints[Math.floor(customer.spawnAt + customer.item.length) % customerWaypoints.length];
+          const secondStop = customerWaypoints[(customer.item.length + Math.floor(customer.spawnAt * 3)) % customerWaypoints.length];
+          setCustomerRoute(customer, [
+            new THREE.Vector3(15.6, 0, 8.3),
+            shelfStop,
+            secondStop,
+            checkoutTarget(),
+          ]);
           customer.leaveTime = 0;
+          customer.mesh.userData.stuckTime = 0;
           return;
         }
         if (customer.stage === 'leave') {
@@ -2323,7 +2350,7 @@ export default function App() {
             customer.mood = 'angry';
             customer.stage = 'leave';
             customer.leaveTime = 0;
-            customer.target.set(19.5, 0, 12);
+            setCustomerRoute(customer, customerExitRoute());
             const served = Math.min(current.served + 1, state.customers.length);
             patchHud({
               served,
@@ -2372,8 +2399,18 @@ export default function App() {
           );
           if (customer.stage !== 'leave' && state.colliders.some((collider) => collider.intersectsBox(customerBox))) {
             pos.copy(oldCustomerPos);
-            customer.target.copy(customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)]);
+            const stuckTime = Number(customer.mesh.userData.stuckTime ?? 0) + delta;
+            customer.mesh.userData.stuckTime = stuckTime;
+            const detour = customerWaypoints[Math.floor(Math.random() * customerWaypoints.length)].clone();
+            detour.x += (Math.random() > 0.5 ? 1 : -1) * 1.4;
+            setCustomerRoute(customer, [detour, checkoutTarget()]);
+            if (stuckTime > 2.5) {
+              pos.copy(detour);
+              customer.mesh.userData.stuckTime = 0;
+            }
           }
+        } else if (advanceCustomerRoute(customer)) {
+          customer.mesh.userData.stuckTime = 0;
         } else if (customer.stage === 'leave') {
           customer.stage = 'gone';
           customer.mesh.visible = false;
@@ -2383,7 +2420,7 @@ export default function App() {
           customer.checkoutTime = 0;
           customer.angry = false;
           giveCustomerProduct(customer);
-          customer.target.set(-3 + Math.random() * 2, 0, 10.2 + Math.random());
+          customer.target.copy(checkoutTarget());
           if (customer.weird) {
             patchHud({ message: 'Клиент слишком долго смотрит в камеру. На лице нет моргания.' });
             scare(customer.item === 'пустой чек' ? 'screamer-mask' : 'screamer-grin');
@@ -2499,7 +2536,7 @@ export default function App() {
             outsideFinal: false,
             message: current.outsideFinal
               ? 'Концовка 2/3: Свидетель. Ты заманил монстра к магазину, двери закрылись, а камеры сохранили запись.'
-              : 'You returned to the store through the automatic doors.',
+              : 'Ты вернулся в магазин через автоматические двери.',
           });
         } else {
           const closeToDumpster = state.camera.position.distanceTo(state.dumpster.position) < 6.2;
@@ -2512,7 +2549,7 @@ export default function App() {
             patchHud({
               outsideFinal: true,
               fear: clamp(current.fear + 18, 0, 100),
-              message: 'The dumpster lid moves by itself. Run back to the store.',
+            message: 'Крышка контейнера двигается сама. Беги обратно в магазин.',
             });
             scare('screamer-trash3d');
           }
@@ -2722,7 +2759,7 @@ export default function App() {
     setSkinsOpen(false);
     patchHud({
       phase: 'shift',
-      message: localOnline ? `Online room: ${onlineRoom}. Open this game in another tab with the same room to see the second cashier.` : localCoop ? 'Два игрока на одном ПК: WASD и I/J/K/L.' : 'Ночная смена началась. Клиенты уже заходят в магазин.',
+      message: localOnline ? `Онлайн-комната: ${onlineRoom}. Открой игру во второй вкладке с той же комнатой, чтобы увидеть второго кассира.` : localCoop ? 'Два игрока на одном ПК: WASD и I/J/K/L.' : 'Ночная смена началась. Клиенты уже заходят в магазин.',
       ending: null,
       tasks: initialTasks,
       served: 0,
@@ -2757,6 +2794,8 @@ export default function App() {
       customer.mesh.userData.carryingProduct = false;
       customer.mesh.userData.stareUntil = 0;
       customer.mesh.userData.nextStareAt = 0;
+      customer.mesh.userData.route = [];
+      customer.mesh.userData.stuckTime = 0;
     });
     state.carts.forEach((item) => {
       item.userData.follow = false;
@@ -3028,7 +3067,7 @@ export default function App() {
 
     if (near(state.phone) && !current.tasks.phone) {
       completeTask('phone');
-      patchHud({ message: 'Phone voice: Do not stay near the dumpsters at night. The cameras lose signal there.' });
+      patchHud({ message: 'Голос в телефоне: ночью не стой у мусорных контейнеров. Камеры там теряют сигнал.' });
       scare('screamer-dust');
       return;
     }
@@ -3039,7 +3078,7 @@ export default function App() {
       customer.checkoutTime = 0;
       customer.angry = false;
       customer.mood = 'calm';
-      customer.target.set(19.5, 0, 12);
+      setCustomerRoute(customer, customerExitRoute());
       customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
       customer.mesh.userData.carryingProduct = false;
       const served = current.served + 1;
@@ -3089,7 +3128,7 @@ export default function App() {
         trashDelivered: delivered,
         outsideFinal: true,
         fear: clamp(current.fear + 22, 0, 100),
-        message: 'The trash bag drops into the dumpster. Something inside pushes back. Run to the store.',
+        message: 'Мусорный пакет упал в контейнер. Что-то изнутри толкнуло его обратно. Беги в магазин.',
       });
       state.monster.mesh.visible = true;
       state.monster.active = true;

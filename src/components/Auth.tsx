@@ -19,7 +19,7 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
     setMessage('');
     try {
       if (!supabase) {
-        setMessage('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+        setMessage('База Supabase не настроена. Можно играть как гость.');
         return;
       }
 
@@ -34,10 +34,10 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
       if (error) setMessage(error.message);
       else {
         setStep('code');
-        setMessage('Code sent. Check your Gmail inbox or spam folder.');
+        setMessage('Код отправлен. Проверь почту или папку спам.');
       }
     } catch {
-      setMessage('Could not send the code. Try again.');
+      setMessage('Не получилось отправить код. Попробуй еще раз.');
     } finally {
       setBusy(false);
     }
@@ -49,7 +49,7 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
     setMessage('');
     try {
       if (!supabase) {
-        setMessage('Supabase is not configured.');
+        setMessage('База Supabase не настроена. Можно играть как гость.');
         return;
       }
 
@@ -61,11 +61,11 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
 
       if (error) setMessage(error.message);
       else {
-        setMessage('Login complete. Opening the night shift.');
+        setMessage('Вход выполнен. Открываю ночную смену.');
         onSuccess?.();
       }
     } catch {
-      setMessage('Wrong or expired code.');
+      setMessage('Код неверный или устарел.');
     } finally {
       setBusy(false);
     }
@@ -74,38 +74,38 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
   return (
     <section className="auth-screen">
       <div className="auth-card">
-        <span className="auth-kicker">Secure access</span>
-        <h1>Shesterochka Horror</h1>
-        <p>Enter your email, receive a one-time code, then continue the night shift.</p>
+        <span className="auth-kicker">Вход в игру</span>
+        <h1>Шестёрочка Horror</h1>
+        <p>Введи почту, получи одноразовый код и продолжай ночную смену. Можно закрыть окно и играть гостем.</p>
 
         {step === 'email' ? (
           <form onSubmit={sendCode} className="auth-form">
             <input
               type="email"
-              placeholder="yourname@gmail.com"
+              placeholder="твоя почта"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
             />
             <button type="submit" disabled={busy}>
-              {busy ? 'Sending...' : 'Send code'}
+              {busy ? 'Отправляю...' : 'Отправить код'}
             </button>
           </form>
         ) : (
           <form onSubmit={verifyCode} className="auth-form">
             <input
               inputMode="numeric"
-              placeholder="6-digit code"
+              placeholder="код из письма"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               required
             />
             <button type="submit" disabled={busy}>
-              {busy ? 'Checking...' : 'Verify code'}
+              {busy ? 'Проверяю...' : 'Подтвердить код'}
             </button>
             <button type="button" className="ghost" onClick={() => setStep('email')}>
-              Change email
+              Сменить почту
             </button>
           </form>
         )}
@@ -113,7 +113,7 @@ export function Auth({ onClose, onSuccess }: AuthProps) {
         {message && <p className="auth-message">{message}</p>}
         {onClose && (
           <button type="button" className="ghost auth-skip" onClick={onClose}>
-            Back
+            Назад
           </button>
         )}
       </div>

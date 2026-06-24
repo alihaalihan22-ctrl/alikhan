@@ -16,37 +16,37 @@ const slides = [
   {
     kicker: 'Слайд 01',
     title: 'Алихан Сулейменов',
-    text: 'Я создаю 3D-хоррор от первого лица про ночную смену в странном супермаркете.',
+    text: 'Я создаю 3D-хоррор от первого лица про ночную смену кассира в странном супермаркете.',
     type: 'intro',
   },
   {
     kicker: 'Слайд 02',
     title: 'Шестёрочка Horror',
-    text: 'Веб-хоррор, где нужно обслуживать клиентов, пополнять полки, отвечать на красный телефон, проверять камеры, собирать мусор и выжить на улице.',
+    text: 'Игрок обслуживает клиентов, пополняет полки, проверяет камеры, собирает мусор и пытается выжить после выхода на улицу.',
     type: 'app',
   },
   {
     kicker: 'Слайд 03',
-    title: 'Системы игры',
-    text: 'В игре есть 3D-полки, клиенты с товарами, автоматические двери, холодильники, тележки, комната охраны, мусорные пакеты, скримеры, телефонное управление и онлайн-комната.',
+    title: 'Что есть в игре',
+    text: '3D-полки, товары, клиенты с маршрутами, касса, холодильники, тележки, комната охраны, скримеры, мобильное управление и онлайн-комната.',
     type: 'screens',
   },
   {
     kicker: 'Слайд 04',
-    title: 'Демо 20 секунд',
-    text: 'Видео показывает атмосферу 3D-магазина: полки, клиента, камеры, мерцающий свет и монстра вдалеке.',
+    title: 'Видео 35 секунд',
+    text: 'Короткая нарезка из игры: магазин, интерфейс, атмосфера, свет, движение и хоррор-моменты.',
     type: 'demo',
   },
   {
     kicker: 'Слайд 05',
     title: 'Играй сейчас',
-    text: 'Сканируй QR-код, открой игру, создай комнату, пригласи друга и попробуй закрыть смену до того, как проснется контейнер.',
+    text: 'Сканируй QR-код, открывай игру на телефоне или компьютере и попробуй закрыть смену до появления монстра.',
     type: 'qr',
   },
   {
     kicker: 'Слайд 06',
-    title: 'Последнее обновление',
-    text: 'Новая версия улучшает свет, зеркало с отражением, атмосферу магазина, логику возрождения и полировку перед выпуском.',
+    title: 'Финальная версия',
+    text: 'Обновление улучшает мобильный вид, клиентов, скины кассира, презентацию, видео и стабильность перед выпуском.',
     type: 'update',
   },
 ] as const;
@@ -85,7 +85,7 @@ function ScreenshotGrid() {
         <i className="shot-customer" />
       </figure>
       <figure>
-        <span className="shot-label">Склад</span>
+        <span className="shot-label">Полки и склад</span>
         <i className="shot-shelf" />
         <i className="shot-box a" />
         <i className="shot-box b" />
@@ -103,7 +103,7 @@ function DemoPlayer() {
   return (
     <div className="demo-player real-game-video">
       <video
-        src={`${import.meta.env.BASE_URL}assets/game-demo-20.webm`}
+        src={`${import.meta.env.BASE_URL}assets/game-demo-35.webm`}
         controls
         autoPlay
         muted
@@ -111,7 +111,7 @@ function DemoPlayer() {
         playsInline
         poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
       />
-      <span className="demo-caption">20 секунд 3D-геймплея: полки, клиент, камеры, свет и монстр.</span>
+      <span className="demo-caption">35 секунд из игры: магазин, полки, интерфейс, свет и хоррор-атмосфера.</span>
     </div>
   );
 }
@@ -161,7 +161,7 @@ export default function Presentation() {
             <div className="author-card">
               <i>AS</i>
               <strong>Разработчик игры</strong>
-              <small>3D-хоррор, атмосфера, клиенты, мультиплеер</small>
+              <small>Факт: люблю делать атмосферу, где страшно даже без скримера.</small>
             </div>
           )}
           {slide.type === 'app' && (
@@ -173,26 +173,26 @@ export default function Presentation() {
           {slide.type === 'demo' && <DemoPlayer />}
           {slide.type === 'qr' && (
             <div className="qr-card">
-              <img src={qrUrl} alt="QR code to Shesterochka Horror" />
+              <img src={qrUrl} alt="QR-код на игру Шестёрочка Horror" />
               <strong>{gameUrl}</strong>
             </div>
           )}
           {slide.type === 'update' && (
             <div className="update-card">
               <span>vNext</span>
-              <strong>Зеркало + атмосфера</strong>
+              <strong>Готово к показу</strong>
               <ul>
-                <li>Черная тень убрана</li>
-                <li>Зеркало с отражением внутри магазина</li>
-                <li>Чище свет и сильнее хоррор-настроение</li>
-                <li>Больше реалистичных предметов</li>
+                <li>Клиенты двигаются по маршрутам и уходят через двери</li>
+                <li>Мобильный интерфейс стал чище и быстрее</li>
+                <li>Скины кассира показываются как формы</li>
+                <li>Презентация ярче, полностью на русском и с видео 35 секунд</li>
               </ul>
             </div>
           )}
         </div>
       </section>
 
-      <nav className="presentation-nav" aria-label="Presentation navigation">
+      <nav className="presentation-nav" aria-label="Навигация презентации">
         <button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>
           Назад
         </button>
