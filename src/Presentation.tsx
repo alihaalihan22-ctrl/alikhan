@@ -77,6 +77,24 @@ function MildScares() {
   );
 }
 
+function PresentationEffects() {
+  return (
+    <div className="presentation-effects" aria-hidden="true">
+      <i className="alarm-sweep" />
+      <i className="camera-signal one" />
+      <i className="camera-signal two" />
+      <i className="camera-signal three" />
+      <i className="floating-dust a" />
+      <i className="floating-dust b" />
+      <i className="floating-dust c" />
+      <i className="floating-dust d" />
+      <i className="floating-dust e" />
+      <i className="floating-dust f" />
+      <i className="warning-time">05:12</i>
+    </div>
+  );
+}
+
 function ScreenshotGrid() {
   return (
     <div className="presentation-shots">
@@ -138,11 +156,17 @@ export default function Presentation() {
     <main className="presentation-page">
       <StoreScene />
       <MildScares />
+      <PresentationEffects />
       <section className={`presentation-slide slide-${slide.type}`} key={slide.type}>
         <div className="presentation-copy">
-          <span>{slide.kicker}</span>
+          <span className="slide-kicker">{slide.kicker}</span>
           <h1>{slide.title}</h1>
           <p>{slide.text}</p>
+          <div className="slide-status">
+            <i />
+            <b>{ru('\u0421\u043c\u0435\u043d\u0430 05:12')}</b>
+            <em>{String(index + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}</em>
+          </div>
           {slide.type === 'app' && (
             <div className="feature-line">
               <b>3D</b>
@@ -200,6 +224,7 @@ export default function Presentation() {
         </button>
         <div className="presentation-progress">
           <i style={{ width: `${progress}%` }} />
+          <span style={{ left: `calc(${progress}% - 8px)` }} />
         </div>
         <button type="button" onClick={() => setIndex((value) => Math.min(slides.length - 1, value + 1))} disabled={index === slides.length - 1}>
           {ru('\u0412\u043f\u0435\u0440\u0435\u0434')}
