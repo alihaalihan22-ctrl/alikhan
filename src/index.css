@@ -287,7 +287,7 @@ button:disabled {
 }
 
 .cashier-model-preview::before {
-  content: "ФОРМА";
+  content: "\0424\041e\0420\041c\0410";
   position: absolute;
   left: 12px;
   right: 12px;
@@ -442,7 +442,7 @@ button:disabled {
 }
 
 .skin-preview::before {
-  content: "картинка формы";
+  content: "\043a\0430\0440\0442\0438\043d\043a\0430 \0444\043e\0440\043c\044b";
   position: absolute;
   left: 0;
   top: 0;

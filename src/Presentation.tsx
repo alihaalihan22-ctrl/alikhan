@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+const ru = (text: string) => text;
+
 const getGameUrl = () => {
   const url = new URL(window.location.href);
   url.search = '';
@@ -14,39 +16,39 @@ const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=1
 
 const slides = [
   {
-    kicker: 'Слайд 01',
-    title: 'Алихан Сулейменов',
-    text: 'Я создаю 3D-хоррор от первого лица про ночную смену кассира в странном супермаркете.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 01'),
+    title: ru('\u0410\u043b\u0438\u0445\u0430\u043d \u0421\u0443\u043b\u0435\u0439\u043c\u0435\u043d\u043e\u0432'),
+    text: ru('\u042f \u0441\u043e\u0437\u0434\u0430\u044e 3D-\u0445\u043e\u0440\u0440\u043e\u0440 \u043e\u0442 \u043f\u0435\u0440\u0432\u043e\u0433\u043e \u043b\u0438\u0446\u0430 \u043f\u0440\u043e \u043d\u043e\u0447\u043d\u0443\u044e \u0441\u043c\u0435\u043d\u0443 \u043a\u0430\u0441\u0441\u0438\u0440\u0430 \u0432 \u0441\u0442\u0440\u0430\u043d\u043d\u043e\u043c \u0441\u0443\u043f\u0435\u0440\u043c\u0430\u0440\u043a\u0435\u0442\u0435.'),
     type: 'intro',
   },
   {
-    kicker: 'Слайд 02',
-    title: 'Шестёрочка Horror',
-    text: 'Игрок обслуживает клиентов, пополняет полки, проверяет камеры, собирает мусор и пытается выжить после выхода на улицу.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 02'),
+    title: ru('\u0428\u0435\u0441\u0442\u0451\u0440\u043e\u0447\u043a\u0430 Horror'),
+    text: ru('\u0418\u0433\u0440\u043e\u043a \u043e\u0431\u0441\u043b\u0443\u0436\u0438\u0432\u0430\u0435\u0442 \u043a\u043b\u0438\u0435\u043d\u0442\u043e\u0432, \u043f\u043e\u043f\u043e\u043b\u043d\u044f\u0435\u0442 \u043f\u043e\u043b\u043a\u0438, \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442 \u043a\u0430\u043c\u0435\u0440\u044b, \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u0442 \u043c\u0443\u0441\u043e\u0440 \u0438 \u043f\u044b\u0442\u0430\u0435\u0442\u0441\u044f \u0432\u044b\u0436\u0438\u0442\u044c \u043f\u043e\u0441\u043b\u0435 \u0432\u044b\u0445\u043e\u0434\u0430 \u043d\u0430 \u0443\u043b\u0438\u0446\u0443.'),
     type: 'app',
   },
   {
-    kicker: 'Слайд 03',
-    title: 'Что есть в игре',
-    text: '3D-полки, товары, клиенты с маршрутами, касса, холодильники, тележки, комната охраны, скримеры, мобильное управление и онлайн-комната.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 03'),
+    title: ru('\u0427\u0442\u043e \u0435\u0441\u0442\u044c \u0432 \u0438\u0433\u0440\u0435'),
+    text: ru('3D-\u043f\u043e\u043b\u043a\u0438, \u0442\u043e\u0432\u0430\u0440\u044b, \u043a\u043b\u0438\u0435\u043d\u0442\u044b \u0441 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430\u043c\u0438, \u043a\u0430\u0441\u0441\u0430, \u0445\u043e\u043b\u043e\u0434\u0438\u043b\u044c\u043d\u0438\u043a\u0438, \u0442\u0435\u043b\u0435\u0436\u043a\u0438, \u043a\u043e\u043c\u043d\u0430\u0442\u0430 \u043e\u0445\u0440\u0430\u043d\u044b, \u0441\u043a\u0440\u0438\u043c\u0435\u0440\u044b, \u043c\u043e\u0431\u0438\u043b\u044c\u043d\u043e\u0435 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0438 \u043e\u043d\u043b\u0430\u0439\u043d-\u043a\u043e\u043c\u043d\u0430\u0442\u0430.'),
     type: 'screens',
   },
   {
-    kicker: 'Слайд 04',
-    title: 'Видео 35 секунд',
-    text: 'Короткая нарезка из игры: магазин, интерфейс, атмосфера, свет, движение и хоррор-моменты.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 04'),
+    title: ru('\u0412\u0438\u0434\u0435\u043e 35 \u0441\u0435\u043a\u0443\u043d\u0434'),
+    text: ru('\u041a\u043e\u0440\u043e\u0442\u043a\u0430\u044f \u043d\u0430\u0440\u0435\u0437\u043a\u0430 \u0438\u0437 \u0438\u0433\u0440\u044b: \u043c\u0430\u0433\u0430\u0437\u0438\u043d, \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441, \u0430\u0442\u043c\u043e\u0441\u0444\u0435\u0440\u0430, \u0441\u0432\u0435\u0442, \u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435 \u0438 \u0445\u043e\u0440\u0440\u043e\u0440-\u043c\u043e\u043c\u0435\u043d\u0442\u044b.'),
     type: 'demo',
   },
   {
-    kicker: 'Слайд 05',
-    title: 'Играй сейчас',
-    text: 'Сканируй QR-код, открывай игру на телефоне или компьютере и попробуй закрыть смену до появления монстра.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 05'),
+    title: ru('\u0418\u0433\u0440\u0430\u0439 \u0441\u0435\u0439\u0447\u0430\u0441'),
+    text: ru('\u0421\u043a\u0430\u043d\u0438\u0440\u0443\u0439 QR-\u043a\u043e\u0434, \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0439 \u0438\u0433\u0440\u0443 \u043d\u0430 \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0435 \u0438\u043b\u0438 \u043a\u043e\u043c\u043f\u044c\u044e\u0442\u0435\u0440\u0435 \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439 \u0437\u0430\u043a\u0440\u044b\u0442\u044c \u0441\u043c\u0435\u043d\u0443 \u0434\u043e \u043f\u043e\u044f\u0432\u043b\u0435\u043d\u0438\u044f \u043c\u043e\u043d\u0441\u0442\u0440\u0430.'),
     type: 'qr',
   },
   {
-    kicker: 'Слайд 06',
-    title: 'Финальная версия',
-    text: 'Обновление улучшает мобильный вид, клиентов, скины кассира, презентацию, видео и стабильность перед выпуском.',
+    kicker: ru('\u0421\u043b\u0430\u0439\u0434 06'),
+    title: ru('\u0424\u0438\u043d\u0430\u043b\u044c\u043d\u0430\u044f \u0432\u0435\u0440\u0441\u0438\u044f'),
+    text: ru('\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0443\u043b\u0443\u0447\u0448\u0430\u0435\u0442 \u043c\u043e\u0431\u0438\u043b\u044c\u043d\u044b\u0439 \u0432\u0438\u0434, \u043a\u043b\u0438\u0435\u043d\u0442\u043e\u0432, \u0441\u043a\u0438\u043d\u044b \u043a\u0430\u0441\u0441\u0438\u0440\u0430, \u043f\u0440\u0435\u0437\u0435\u043d\u0442\u0430\u0446\u0438\u044e, \u0432\u0438\u0434\u0435\u043e \u0438 \u0441\u0442\u0430\u0431\u0438\u043b\u044c\u043d\u043e\u0441\u0442\u044c \u043f\u0435\u0440\u0435\u0434 \u0432\u044b\u043f\u0443\u0441\u043a\u043e\u043c.'),
     type: 'update',
   },
 ] as const;
@@ -54,7 +56,7 @@ const slides = [
 function StoreScene() {
   return (
     <div className="presentation-store" aria-hidden="true">
-      <i className="store-sign">6ШЕСТЁРАЧКА</i>
+      <i className="store-sign">6{ru('\u0428\u0415\u0421\u0422\u0401\u0420\u0410\u0427\u041a\u0410')}</i>
       <i className="store-door left" />
       <i className="store-door right" />
       <i className="store-light one" />
@@ -79,20 +81,20 @@ function ScreenshotGrid() {
   return (
     <div className="presentation-shots">
       <figure>
-        <span className="shot-label">Касса</span>
+        <span className="shot-label">{ru('\u041a\u0430\u0441\u0441\u0430')}</span>
         <i className="shot-ceiling" />
         <i className="shot-counter" />
         <i className="shot-customer" />
       </figure>
       <figure>
-        <span className="shot-label">Полки и склад</span>
+        <span className="shot-label">{ru('\u041f\u043e\u043b\u043a\u0438 \u0438 \u0441\u043a\u043b\u0430\u0434')}</span>
         <i className="shot-shelf" />
         <i className="shot-box a" />
         <i className="shot-box b" />
         <i className="shot-box c" />
       </figure>
       <figure>
-        <span className="shot-label">Монстр у мусорки</span>
+        <span className="shot-label">{ru('\u041c\u043e\u043d\u0441\u0442\u0440 \u0443 \u043c\u0443\u0441\u043e\u0440\u043a\u0438')}</span>
         <img src={`${import.meta.env.BASE_URL}assets/monster-mouth.png`} alt="" />
       </figure>
     </div>
@@ -111,7 +113,7 @@ function DemoPlayer() {
         playsInline
         poster={`${import.meta.env.BASE_URL}assets/screamer-trash3d.png`}
       />
-      <span className="demo-caption">35 секунд из игры: магазин, полки, интерфейс, свет и хоррор-атмосфера.</span>
+      <span className="demo-caption">{ru('35 \u0441\u0435\u043a\u0443\u043d\u0434 \u0438\u0437 \u0438\u0433\u0440\u044b: \u043c\u0430\u0433\u0430\u0437\u0438\u043d, \u043f\u043e\u043b\u043a\u0438, \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441, \u0441\u0432\u0435\u0442 \u0438 \u0445\u043e\u0440\u0440\u043e\u0440-\u0430\u0442\u043c\u043e\u0441\u0444\u0435\u0440\u0430.')}</span>
     </div>
   );
 }
@@ -144,14 +146,14 @@ export default function Presentation() {
           {slide.type === 'app' && (
             <div className="feature-line">
               <b>3D</b>
-              <b>Хоррор</b>
-              <b>Онлайн</b>
-              <b>Телефон</b>
+              <b>{ru('\u0425\u043e\u0440\u0440\u043e\u0440')}</b>
+              <b>{ru('\u041e\u043d\u043b\u0430\u0439\u043d')}</b>
+              <b>{ru('\u0422\u0435\u043b\u0435\u0444\u043e\u043d')}</b>
             </div>
           )}
           {slide.type === 'qr' && (
             <a className="presentation-cta" href={gameUrl}>
-              Открыть игру
+              {ru('\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443')}
             </a>
           )}
         </div>
@@ -160,8 +162,8 @@ export default function Presentation() {
           {slide.type === 'intro' && (
             <div className="author-card">
               <i>AS</i>
-              <strong>Разработчик игры</strong>
-              <small>Факт: люблю делать атмосферу, где страшно даже без скримера.</small>
+              <strong>{ru('\u0420\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a \u0438\u0433\u0440\u044b')}</strong>
+              <small>{ru('\u0424\u0430\u043a\u0442: \u043b\u044e\u0431\u043b\u044e \u0434\u0435\u043b\u0430\u0442\u044c \u0430\u0442\u043c\u043e\u0441\u0444\u0435\u0440\u0443, \u0433\u0434\u0435 \u0441\u0442\u0440\u0430\u0448\u043d\u043e \u0434\u0430\u0436\u0435 \u0431\u0435\u0437 \u0441\u043a\u0440\u0438\u043c\u0435\u0440\u0430.')}</small>
             </div>
           )}
           {slide.type === 'app' && (
@@ -173,34 +175,34 @@ export default function Presentation() {
           {slide.type === 'demo' && <DemoPlayer />}
           {slide.type === 'qr' && (
             <div className="qr-card">
-              <img src={qrUrl} alt="QR-код на игру Шестёрочка Horror" />
+              <img src={qrUrl} alt="QR code" />
               <strong>{gameUrl}</strong>
             </div>
           )}
           {slide.type === 'update' && (
             <div className="update-card">
               <span>vNext</span>
-              <strong>Готово к показу</strong>
+              <strong>{ru('\u0413\u043e\u0442\u043e\u0432\u043e \u043a \u043f\u043e\u043a\u0430\u0437\u0443')}</strong>
               <ul>
-                <li>Клиенты двигаются по маршрутам и уходят через двери</li>
-                <li>Мобильный интерфейс стал чище и быстрее</li>
-                <li>Скины кассира показываются как формы</li>
-                <li>Презентация ярче, полностью на русском и с видео 35 секунд</li>
+                <li>{ru('\u041a\u043b\u0438\u0435\u043d\u0442\u044b \u0434\u0432\u0438\u0433\u0430\u044e\u0442\u0441\u044f \u043f\u043e \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430\u043c \u0438 \u0443\u0445\u043e\u0434\u044f\u0442 \u0447\u0435\u0440\u0435\u0437 \u0434\u0432\u0435\u0440\u0438')}</li>
+                <li>{ru('\u041c\u043e\u0431\u0438\u043b\u044c\u043d\u044b\u0439 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441 \u0441\u0442\u0430\u043b \u0447\u0438\u0449\u0435 \u0438 \u0431\u044b\u0441\u0442\u0440\u0435\u0435')}</li>
+                <li>{ru('\u0421\u043a\u0438\u043d\u044b \u043a\u0430\u0441\u0441\u0438\u0440\u0430 \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u044e\u0442\u0441\u044f \u043a\u0430\u043a \u0444\u043e\u0440\u043c\u044b')}</li>
+                <li>{ru('\u041f\u0440\u0435\u0437\u0435\u043d\u0442\u0430\u0446\u0438\u044f \u044f\u0440\u0447\u0435, \u043f\u043e\u043b\u043d\u043e\u0441\u0442\u044c\u044e \u043d\u0430 \u0440\u0443\u0441\u0441\u043a\u043e\u043c \u0438 \u0441 \u0432\u0438\u0434\u0435\u043e 35 \u0441\u0435\u043a\u0443\u043d\u0434')}</li>
               </ul>
             </div>
           )}
         </div>
       </section>
 
-      <nav className="presentation-nav" aria-label="Навигация презентации">
+      <nav className="presentation-nav" aria-label="Presentation navigation">
         <button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>
-          Назад
+          {ru('\u041d\u0430\u0437\u0430\u0434')}
         </button>
         <div className="presentation-progress">
           <i style={{ width: `${progress}%` }} />
         </div>
         <button type="button" onClick={() => setIndex((value) => Math.min(slides.length - 1, value + 1))} disabled={index === slides.length - 1}>
-          Вперед
+          {ru('\u0412\u043f\u0435\u0440\u0435\u0434')}
         </button>
       </nav>
     </main>
