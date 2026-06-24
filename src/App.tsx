@@ -99,14 +99,14 @@ type FridgeUnit = {
   openedOnce: boolean;
 };
 
-const productNames = ['Pepsi', 'Fanta', 'Р’РѕРґР°', 'Р§РёРїСЃС‹', 'Р‘СѓСЂРіРµСЂ', 'РҐРѕС‚-РґРѕРі', 'РљРѕСЂРЅ-РґРѕРі', 'РЁРѕРєРѕР»Р°РґРєР°', 'РџРµС‡РµРЅСЊРµ', 'РћРІРѕС‰Рё', 'Р¤СЂСѓРєС‚С‹', 'РњРѕСЂРѕР¶РµРЅРѕРµ'];
+const productNames = ['Pepsi', 'Fanta', 'Вода', 'Чипсы', 'Бургер', 'Хот-дог', 'Корн-дог', 'Шоколадка', 'Печенье', 'Овощи', 'Фрукты', 'Мороженое'];
 const productColors = [0x1b4fff, 0xff7d19, 0x85d9ff, 0xd8b33a, 0x8d4b22, 0xe7422f, 0xf4f2d7, 0x48a64b, 0xd8f4ff, 0x4aa64d, 0xd84032, 0xf3e8ff];
 const productColorFor = (name: string) => productColors[Math.max(0, productNames.indexOf(name)) % productColors.length];
 const cashierSkins: CashierSkin[] = [
   {
     id: 'uniform',
-    name: 'РќРѕС‡РЅР°СЏ С„РѕСЂРјР°',
-    description: 'РљСЂР°СЃРЅР°СЏ С„РѕСЂРјР° РєР°СЃСЃРёСЂР°, Р±РµР№РґР¶ Рё РѕР±С‹С‡РЅС‹Рµ СЂСѓРєРё.',
+    name: 'Ночная форма',
+    description: 'Красная форма кассира, бейдж и обычные руки.',
     sleeve: 0xa51520,
     glove: 0x161719,
     badge: 0xffd56f,
@@ -114,8 +114,8 @@ const cashierSkins: CashierSkin[] = [
   },
   {
     id: 'security',
-    name: 'РћС…СЂР°РЅР°',
-    description: 'РўРµРјРЅР°СЏ РєСѓСЂС‚РєР°, РїР»РѕС‚РЅС‹Рµ РїРµСЂС‡Р°С‚РєРё Рё РјРµС‚Р°Р»Р»РёС‡РµСЃРєРёР№ Р±РµР№РґР¶.',
+    name: 'Охрана',
+    description: 'Темная куртка, плотные перчатки и металлический бейдж.',
     sleeve: 0x15191d,
     glove: 0x050607,
     badge: 0x9fb2bd,
@@ -123,8 +123,8 @@ const cashierSkins: CashierSkin[] = [
   },
   {
     id: 'raincoat',
-    name: 'Р”РѕР¶РґРµРІРёРє',
-    description: 'Р–РµР»С‚С‹Р№ РїР»Р°С‰ РґР»СЏ РІС‹С…РѕРґР° Рє РєРѕРЅС‚РµР№РЅРµСЂР°Рј РїРѕРґ РґРѕР¶РґРµРј.',
+    name: 'Дождевик',
+    description: 'Желтый плащ для выхода к контейнерам под дождем.',
     sleeve: 0xd8a928,
     glove: 0x2c2f2c,
     badge: 0xeef3ff,
@@ -132,8 +132,8 @@ const cashierSkins: CashierSkin[] = [
   },
   {
     id: 'night',
-    name: 'Р§РµСЂРЅР°СЏ СЃРјРµРЅР°',
-    description: 'РњР°С‚РѕРІР°СЏ С‡РµСЂРЅР°СЏ С„РѕСЂРјР°, РјРµРЅСЊС€Рµ Р±Р»РёРєРѕРІ РЅР° РєР°РјРµСЂР°С….',
+    name: 'Черная смена',
+    description: 'Матовая черная форма, меньше бликов на камерах.',
     sleeve: 0x07080a,
     glove: 0x101010,
     badge: 0x8b1f2a,
@@ -151,16 +151,16 @@ const getSavedSkin = (): CashierSkinId => {
 const defaultReviews: GameReview[] = [
   {
     id: 'default-1',
-    name: 'РќРѕС‡РЅРѕР№ РёРіСЂРѕРє',
+    name: 'Ночной игрок',
     rating: 5,
-    text: 'РђС‚РјРѕСЃС„РµСЂР° СЃС‚Р°Р»Р° РЅР°РјРЅРѕРіРѕ СЃС‚СЂР°С€РЅРµРµ: СЃРІРµС‚ РјРѕСЂРіР°РµС‚, РєР»РёРµРЅС‚С‹ СЃРјРѕС‚СЂСЏС‚ СЃС‚СЂР°РЅРЅРѕ, Р° СѓР»РёС†Р° СЂРµР°Р»СЊРЅРѕ РЅР°РїСЂСЏРіР°РµС‚.',
+    text: 'Атмосфера стала намного страшнее: свет моргает, клиенты смотрят странно, а улица реально напрягает.',
     createdAt: '2026-06-23T00:00:00.000Z',
   },
   {
     id: 'default-2',
-    name: 'РљР°СЃСЃРёСЂ 05:12',
+    name: 'Кассир 05:12',
     rating: 4,
-    text: 'РљСЂСѓС‚Рѕ, С‡С‚Рѕ РјРѕР¶РЅРѕ РѕР±СЃР»СѓР¶РёРІР°С‚СЊ РєР»РёРµРЅС‚РѕРІ, РїРѕРїРѕР»РЅСЏС‚СЊ РїРѕР»РєРё Рё РїРѕС‚РѕРј РІС‹С…РѕРґРёС‚СЊ Рє РјСѓСЃРѕСЂРєРµ. РҐРѕС‡Сѓ РµС‰Рµ Р±РѕР»СЊС€Рµ Р·РІСѓРєРѕРІ.',
+    text: 'Круто, что можно обслуживать клиентов, пополнять полки и потом выходить к мусорке. Хочу еще больше звуков.',
     createdAt: '2026-06-23T00:01:00.000Z',
   },
 ];
@@ -175,7 +175,7 @@ const getSavedReviews = (): GameReview[] => {
       .filter((review) => typeof review.text === 'string' && typeof review.name === 'string')
       .map((review) => ({
         id: String(review.id || crypto.randomUUID()),
-        name: String(review.name).slice(0, 32) || 'РРіСЂРѕРє',
+        name: String(review.name).slice(0, 32) || 'Игрок',
         rating: clamp(Number(review.rating) || 5, 1, 5),
         text: String(review.text).slice(0, 420),
         createdAt: String(review.createdAt || new Date().toISOString()),
@@ -273,37 +273,37 @@ function cylinder(radius: number, height: number, color: number, pos: [number, n
 
 function makeProduct(name: string, color: number) {
   const group = new THREE.Group();
-  if (name.includes('Pepsi') || name.includes('Fanta') || name.includes('Р’РѕРґР°')) {
+  if (name.includes('Pepsi') || name.includes('Fanta') || name.includes('Вода')) {
     const bottle = cylinder(0.13, 0.62, color, [0, 0.31, 0], 24);
     const cap = cylinder(0.1, 0.08, 0xeeeeee, [0, 0.66, 0], 18);
     const label = box(0.29, 0.16, 0.02, 0xf4f4f4, [0, 0.36, -0.13]);
     group.add(bottle, cap, label);
-  } else if (name.includes('Р§РёРї')) {
+  } else if (name.includes('Чип')) {
     const bag = box(0.38, 0.72, 0.14, color, [0, 0.36, 0]);
     bag.rotation.z = 0.08;
     group.add(bag);
-  } else if (name.includes('Р‘СѓСЂРіРµСЂ')) {
+  } else if (name.includes('Бургер')) {
     group.add(cylinder(0.18, 0.13, 0xc9863b, [0, 0.33, 0], 24));
     group.add(cylinder(0.17, 0.08, 0x5b2a16, [0, 0.23, 0], 24));
     group.add(cylinder(0.18, 0.1, 0xe0a24c, [0, 0.14, 0], 24));
-  } else if (name.includes('РґРѕРі')) {
+  } else if (name.includes('дог')) {
     const bun = box(0.52, 0.14, 0.18, 0xd69a53, [0, 0.22, 0]);
     const sausage = box(0.48, 0.08, 0.09, 0xa93b24, [0, 0.31, 0]);
     group.add(bun, sausage);
-  } else if (name.includes('РЁРѕРєРѕР»Р°Рґ')) {
+  } else if (name.includes('Шоколад')) {
     const bar = box(0.56, 0.1, 0.28, 0x4a2118, [0, 0.18, 0]);
     const wrap = box(0.6, 0.12, 0.08, color, [0, 0.2, -0.08]);
     group.add(bar, wrap);
-  } else if (name.includes('РџРµС‡РµРЅСЊРµ')) {
+  } else if (name.includes('Печенье')) {
     for (let i = 0; i < 4; i += 1) {
       const cookie = cylinder(0.12, 0.045, 0xb98045, [-0.18 + i * 0.12, 0.16 + i * 0.025, 0], 18);
       cookie.rotation.x = Math.PI / 2;
       group.add(cookie);
     }
-  } else if (name.includes('РћРІРѕС‰')) {
+  } else if (name.includes('Овощ')) {
     group.add(cylinder(0.16, 0.28, 0x49a644, [0, 0.18, 0], 14));
     group.add(cylinder(0.11, 0.22, 0xdd4a35, [0.18, 0.16, 0.04], 14));
-  } else if (name.includes('Р¤СЂСѓРєС‚')) {
+  } else if (name.includes('Фрукт')) {
     const apple = new THREE.Mesh(
       new THREE.SphereGeometry(0.16, 18, 14),
       new THREE.MeshStandardMaterial({ color: 0xc23228, roughness: 0.42 }),
@@ -659,7 +659,7 @@ function makeStoreSign(pos: [number, number, number]) {
   ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(255,255,255,.55)';
   ctx.shadowBlur = 16;
-  ctx.fillText('6РЁР•РЎРўРЃР РђР§РљРђ', canvas.width / 2, canvas.height / 2);
+  ctx.fillText('6ШЕСТЁРАЧКА', canvas.width / 2, canvas.height / 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const face = new THREE.Mesh(
@@ -1227,31 +1227,31 @@ export default function App() {
     const nextTask = (Object.keys(current.tasks) as TaskKey[]).find((task) => !current.tasks[task]);
     const angryCustomer = state?.customers.find((customer) => customer.mood === 'angry' || customer.mood === 'impatient');
 
-    if (lower.includes('РјРѕРЅСЃС‚СЂ')) {
-      if (state?.monster.mood === 'hunting') return 'РњРѕРЅСЃС‚СЂ СѓР¶Рµ РѕС…РѕС‚РёС‚СЃСЏ. РќРµ СЃС‚РѕР№ Сѓ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ: Р±РµРіРё Рє Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РґРІРµСЂСЏРј РёР»Рё Рє РґР°Р»СЊРЅРµРјСѓ РІС‹С…РѕРґСѓ РЅР° РїР°СЂРєРѕРІРєРµ, С„РѕРЅР°СЂРёРє РґРµСЂР¶Рё РІРєР»СЋС‡РµРЅРЅС‹Рј РєРѕСЂРѕС‚РєРёРјРё РІСЃРїС‹С€РєР°РјРё.';
-      if (state?.monster.mood === 'stalking') return 'РњРѕРЅСЃС‚СЂ СЂСЏРґРѕРј, РЅРѕ РµС‰Рµ РЅРµ СѓСЃРєРѕСЂРёР»СЃСЏ. РћС‚С…РѕРґРё РѕС‚ РјСѓСЃРѕСЂРєРё, РЅРµ СЃРјРѕС‚СЂРё РґРѕР»РіРѕ РІ РѕРґРЅСѓ С‚РѕС‡РєСѓ Рё РґРµСЂР¶Рё РїСѓС‚СЊ РѕР±СЂР°С‚РЅРѕ Рє РјР°РіР°Р·РёРЅСѓ.';
-      if (state?.monster.mood === 'watching') return 'РњРѕРЅСЃС‚СЂ РїРѕРєР° РЅР°Р±Р»СЋРґР°РµС‚ С‡РµСЂРµР· РєР°РјРµСЂС‹ Рё РѕС‚СЂР°Р¶РµРЅРёСЏ. РџСЂРѕРІРµСЂСЊ РєРѕРјРЅР°С‚Сѓ РѕС…СЂР°РЅС‹, РїРѕС‚РѕРј РЅРµ Р·Р°РґРµСЂР¶РёРІР°Р№СЃСЏ Сѓ С…РѕР»РѕРґРёР»СЊРЅРёРєРѕРІ.';
-      return 'РџРѕРєР° РјРѕРЅСЃС‚СЂ СЃРєСЂС‹С‚. РЎРЅР°С‡Р°Р»Р° РґРµР»Р°Р№ СЃРјРµРЅСѓ: С‚РµР»РµС„РѕРЅ, РєР°СЃСЃР°, РїРѕР»РєРё, РєР°РјРµСЂС‹, РјСѓСЃРѕСЂ. РћРЅ РїСЂРѕСЏРІРёС‚СЃСЏ СЃРёР»СЊРЅРµРµ Р±Р»РёР¶Рµ Рє СѓР»РёС†Рµ.';
+    if (lower.includes('монстр')) {
+      if (state?.monster.mood === 'hunting') return 'Монстр уже охотится. Не стой у контейнеров: беги к автоматическим дверям или к дальнему выходу на парковке, фонарик держи включенным короткими вспышками.';
+      if (state?.monster.mood === 'stalking') return 'Монстр рядом, но еще не ускорился. Отходи от мусорки, не смотри долго в одну точку и держи путь обратно к магазину.';
+      if (state?.monster.mood === 'watching') return 'Монстр пока наблюдает через камеры и отражения. Проверь комнату охраны, потом не задерживайся у холодильников.';
+      return 'Пока монстр скрыт. Сначала делай смену: телефон, касса, полки, камеры, мусор. Он проявится сильнее ближе к улице.';
     }
 
-    if (lower.includes('РєР»РёРµРЅС‚') || lower.includes('Р·Р»РёС‚')) {
-      if (angryCustomer) return `РљР»РёРµРЅС‚ СЃ С‚РѕРІР°СЂРѕРј "${angryCustomer.item}" С‚РµСЂСЏРµС‚ С‚РµСЂРїРµРЅРёРµ. РџРѕРґРѕР№РґРё Рє РєР°СЃСЃРµ Рё РЅР°Р¶РјРё E, РёРЅР°С‡Рµ РѕРЅ СѓР№РґРµС‚ Рё РїРѕРґРЅРёРјРµС‚ СЃС‚СЂР°С….`;
-      return 'РљР»РёРµРЅС‚С‹ С…РѕРґСЏС‚ Рє РїРѕР»РєР°Рј, Р±РµСЂСѓС‚ 3D-С‚РѕРІР°СЂС‹ Рё РёРґСѓС‚ Рє РєР°СЃСЃРµ. Р•СЃР»Рё РєР»РёРµРЅС‚ СЃС‚РѕРёС‚ Сѓ РєР°СЃСЃС‹ СЃР»РёС€РєРѕРј РґРѕР»РіРѕ, РѕРЅ Р·Р»РёС‚СЃСЏ Рё СѓС…РѕРґРёС‚ С‡РµСЂРµР· РґРІРµСЂРё.';
+    if (lower.includes('клиент') || lower.includes('злит')) {
+      if (angryCustomer) return `Клиент с товаром "${angryCustomer.item}" теряет терпение. Подойди к кассе и нажми E, иначе он уйдет и поднимет страх.`;
+      return 'Клиенты ходят к полкам, берут 3D-товары и идут к кассе. Если клиент стоит у кассы слишком долго, он злится и уходит через двери.';
     }
 
-    if (lower.includes('РјСѓСЃРѕСЂ')) {
-      if (current.phase === 'outside') return 'РќР° СѓР»РёС†Рµ РЅРµ Р·Р°РґРµСЂР¶РёРІР°Р№СЃСЏ РІРѕР·Р»Рµ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ. Р‘СЂРѕСЃСЊ РїР°РєРµС‚ РІ РјСѓСЃРѕСЂРєСѓ Рё СЃСЂР°Р·Сѓ РІРѕР·РІСЂР°С‰Р°Р№СЃСЏ Рє РјР°РіР°Р·РёРЅСѓ РёР»Рё Р±РµРіРё Рє Р·РµР»РµРЅРѕРјСѓ РІС‹С…РѕРґСѓ.';
-      return 'РњСѓСЃРѕСЂРЅС‹Рµ РїР°РєРµС‚С‹ Р»РµР¶Р°С‚ РІРЅСѓС‚СЂРё РјР°РіР°Р·РёРЅР°. РџРѕРґРѕР№РґРё Рє РїР°РєРµС‚Сѓ, РЅР°Р¶РјРё E, РїРѕС‚РѕРј РЅРµСЃРё РµРіРѕ Рє Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РґРІРµСЂСЏРј Рё РЅР° СѓР»РёС†Сѓ.';
+    if (lower.includes('мусор')) {
+      if (current.phase === 'outside') return 'На улице не задерживайся возле контейнеров. Брось пакет в мусорку и сразу возвращайся к магазину или беги к зеленому выходу.';
+      return 'Мусорные пакеты лежат внутри магазина. Подойди к пакету, нажми E, потом неси его к автоматическим дверям и на улицу.';
     }
 
-    if (lower.includes('СѓР»РёС†') || lower.includes('СЃР±РµР¶') || lower.includes('СѓРјРµСЂ')) {
+    if (lower.includes('улиц') || lower.includes('сбеж') || lower.includes('умер')) {
       return current.outsideFinal
-        ? 'Р¤РёРЅР°Р» РЅР°С‡Р°Р»СЃСЏ: РјРѕРЅСЃС‚СЂ РІС‹Р»РµР·Р°РµС‚ РёР· РєРѕРЅС‚РµР№РЅРµСЂР°. Р‘РµРіРё, РЅРµ РѕР±РѕСЂР°С‡РёРІР°Р№СЃСЏ, РґРµСЂР¶РёСЃСЊ С„РѕРЅР°СЂРµР№ Рё СѓС…РѕРґРё Рє РІС‹С…РѕРґСѓ РёР»Рё РѕР±СЂР°С‚РЅРѕ Рє РґРІРµСЂСЏРј РјР°РіР°Р·РёРЅР°.'
-        : 'Р”Рѕ С„РёРЅР°Р»Р° РјРѕР¶РЅРѕ РІРµСЂРЅСѓС‚СЊСЃСЏ РІ РјР°РіР°Р·РёРЅ: РїРѕРґРѕР№РґРё Рє Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РґРІРµСЂСЏРј Рё РЅР°Р¶РјРё E. Р’ С„РёРЅР°Р»Рµ РїСЂРёРґРµС‚СЃСЏ Р±РµР¶Р°С‚СЊ Р±С‹СЃС‚СЂРµРµ.';
+        ? 'Финал начался: монстр вылезает из контейнера. Беги, не оборачивайся, держись фонарей и уходи к выходу или обратно к дверям магазина.'
+        : 'До финала можно вернуться в магазин: подойди к автоматическим дверям и нажми E. В финале придется бежать быстрее.';
     }
 
-    if (nextTask) return `РЎР»РµРґСѓСЋС‰Р°СЏ С†РµР»СЊ: ${taskLabels[nextTask]}. Р•СЃР»Рё РїРѕС‚РµСЂСЏР»СЃСЏ, РёС‰Рё РѕР±СЉРµРєС‚ СЂСЏРґРѕРј Рё РЅР°Р¶РёРјР°Р№ E.`;
-    return 'Р’СЃРµ РѕСЃРЅРѕРІРЅС‹Рµ РґРµР»Р° РїРѕС‡С‚Рё Р·Р°РєСЂС‹С‚С‹. РџСЂРѕРІРµСЂСЊ, РЅРµС‚ Р»Рё РјСѓСЃРѕСЂР° РІ СЂСѓРєР°С…, Р·Р°С‚РµРј РІС‹С…РѕРґРё РЅР° СѓР»РёС†Сѓ Рё РіРѕС‚РѕРІСЊСЃСЏ Рє РїРѕРіРѕРЅРµ.';
+    if (nextTask) return `Следующая цель: ${taskLabels[nextTask]}. Если потерялся, ищи объект рядом и нажимай E.`;
+    return 'Все основные дела почти закрыты. Проверь, нет ли мусора в руках, затем выходи на улицу и готовься к погоне.';
   };
 
   const equipSkin = (skinId: CashierSkinId) => {
@@ -1259,12 +1259,12 @@ export default function App() {
     setEquippedSkin(skin.id);
     localStorage.setItem('shesterochka-cashier-skin', skin.id);
     if (engine.current) paintCashierViewModel(engine.current.cashierView, skin);
-    patchHud({ message: `РЎРєРёРЅ РЅР°РґРµС‚: ${skin.name}. Р’ РїРµСЂРІРѕРј Р»РёС†Рµ РёР·РјРµРЅРёР»РёСЃСЊ СЂСѓРєРё РєР°СЃСЃРёСЂР°.` });
+    patchHud({ message: `Скин надет: ${skin.name}. В первом лице изменились руки кассира.` });
   };
 
   const removeSkin = () => {
     equipSkin('uniform');
-    patchHud({ message: 'РЎРєРёРЅ СЃРЅСЏС‚. РќР°РґРµС‚Р° РѕР±С‹С‡РЅР°СЏ РЅРѕС‡РЅР°СЏ С„РѕСЂРјР° РєР°СЃСЃРёСЂР°.' });
+    patchHud({ message: 'Скин снят. Надета обычная ночная форма кассира.' });
   };
 
   const saveGame = async (data: Record<string, unknown>) => {
@@ -1286,11 +1286,11 @@ export default function App() {
     setGeminiAnswer('');
 
     const system = [
-      'РўС‹ РІСЃС‚СЂРѕРµРЅРЅС‹Р№ РїРѕРјРѕС‰РЅРёРє Gemini РІРЅСѓС‚СЂРё РёРіСЂС‹ "РЁРµСЃС‚С‘СЂРѕС‡РєР° Horror".',
-      'РћС‚РІРµС‡Р°Р№ РїРѕ-СЂСѓСЃСЃРєРё, РєРѕСЂРѕС‚РєРѕ, РєР°Рє РІРЅСѓС‚СЂРёРёРіСЂРѕРІР°СЏ РїРѕРґСЃРєР°Р·РєР°, Р±РµР· РґР»РёРЅРЅС‹С… Р»РµРєС†РёР№.',
-      'РќРµ Р»РѕРјР°Р№ Р°С‚РјРѕСЃС„РµСЂСѓ С…РѕСЂСЂРѕСЂР°: РїРѕРґСЃРєР°Р·С‹РІР°Р№ С‡РµСЂРµР· РґРµР№СЃС‚РІРёСЏ РёРіСЂРѕРєР°, РєР°РјРµСЂС‹, Р·РІСѓРє, СЃРІРµС‚, РєР°СЃСЃСѓ, РїРѕР»РєРё, РјСѓСЃРѕСЂ Рё СѓР»РёС†Сѓ.',
-      'РЎСЋР¶РµС‚: РЅРѕС‡РЅР°СЏ СЃРјРµРЅР° РєР°СЃСЃРёСЂР°, СЃС‚СЂР°РЅРЅС‹Р№ Р·РІРѕРЅРѕРє РѕС…СЂР°РЅС‹, РєР»РёРµРЅС‚С‹, РїРѕРїРѕР»РЅРµРЅРёРµ РїРѕР»РѕРє, РєР°РјРµСЂС‹, РјСѓСЃРѕСЂРЅС‹Рµ РїР°РєРµС‚С‹, РєРѕРЅС‚РµР№РЅРµСЂС‹ Рё С„РёРЅР°Р»СЊРЅР°СЏ РїРѕРіРѕРЅСЏ 3D-РјРѕРЅСЃС‚СЂР°.',
-      'Р•СЃР»Рё РёРіСЂРѕРє РїСЂРѕСЃРёС‚ "С‡С‚Рѕ РґР°Р»СЊС€Рµ", СЃРєР°Р¶Рё Р±Р»РёР¶Р°Р№С€СѓСЋ РїРѕР»РµР·РЅСѓСЋ С†РµР»СЊ. Р•СЃР»Рё РїСЂРѕСЃРёС‚ РІС‹Р¶РёС‚СЊ, РґР°Р№ С‚Р°РєС‚РёС‡РµСЃРєРёР№ СЃРѕРІРµС‚.',
+      'Ты встроенный помощник Gemini внутри игры "Шестёрочка Horror".',
+      'Отвечай по-русски, коротко, как внутриигровая подсказка, без длинных лекций.',
+      'Не ломай атмосферу хоррора: подсказывай через действия игрока, камеры, звук, свет, кассу, полки, мусор и улицу.',
+      'Сюжет: ночная смена кассира, странный звонок охраны, клиенты, пополнение полок, камеры, мусорные пакеты, контейнеры и финальная погоня 3D-монстра.',
+      'Если игрок просит "что дальше", скажи ближайшую полезную цель. Если просит выжить, дай тактический совет.',
     ].join(' ');
     const prompt = `${cleanQuestion}\n\nCurrent game state: ${JSON.stringify({
       phase: hudRef.current.phase,
@@ -1317,7 +1317,7 @@ export default function App() {
         emerging: Number(engine.current.monster.emerging.toFixed(2)),
         visible: engine.current.monster.mesh.visible,
       } : null,
-      lore: 'РњРѕРЅСЃС‚СЂ Р¶РёРІРµС‚ Сѓ РјСѓСЃРѕСЂРЅС‹С… РєРѕРЅС‚РµР№РЅРµСЂРѕРІ Рё СЃРЅР°С‡Р°Р»Р° РїСЂРѕСЏРІР»СЏРµС‚СЃСЏ С‡РµСЂРµР· РєР°РјРµСЂС‹, РѕС‚СЂР°Р¶РµРЅРёСЏ, С€Р°РіРё Рё РёСЃС‡РµР·Р°СЋС‰РёС… РєР»РёРµРЅС‚РѕРІ.',
+      lore: 'Монстр живет у мусорных контейнеров и сначала проявляется через камеры, отражения, шаги и исчезающих клиентов.',
     })}`;
 
     try {
@@ -1347,12 +1347,12 @@ export default function App() {
     const cleanText = reviewText.trim();
     const cleanName = reviewName.trim();
     if (cleanText.length < 3) {
-      patchHud({ message: 'РќР°РїРёС€Рё РѕС‚Р·С‹РІ С‡СѓС‚СЊ РїРѕРґСЂРѕР±РЅРµРµ, С…РѕС‚СЏ Р±С‹ РїР°СЂСѓ СЃР»РѕРІ.' });
+      patchHud({ message: 'Напиши отзыв чуть подробнее, хотя бы пару слов.' });
       return;
     }
     const review: GameReview = {
       id: crypto.randomUUID(),
-      name: cleanName.slice(0, 32) || session?.user.email?.split('@')[0] || 'РРіСЂРѕРє',
+      name: cleanName.slice(0, 32) || session?.user.email?.split('@')[0] || 'Игрок',
       rating: clamp(reviewRating, 1, 5),
       text: cleanText.slice(0, 420),
       createdAt: new Date().toISOString(),
@@ -1361,20 +1361,20 @@ export default function App() {
     setReviewText('');
     setReviewName('');
     setReviewRating(5);
-    patchHud({ message: 'РћС‚Р·С‹РІ СЃРѕС…СЂР°РЅРµРЅ. РЎРїР°СЃРёР±Рѕ, СЌС‚Рѕ РїРѕРјРѕР¶РµС‚ СѓР»СѓС‡С€РёС‚СЊ РЁРµСЃС‚С‘СЂРѕС‡РєСѓ Horror.' });
+    patchHud({ message: 'Отзыв сохранен. Спасибо, это поможет улучшить Шестёрочку Horror.' });
   };
 
   const getCustomerAiLine = (customer: CustomerAi) => {
     if (customer.weird) {
       const lines = [
-        `РљР»РёРµРЅС‚ С€РµРїС‡РµС‚: "РЇ СѓР¶Рµ РїРѕРєСѓРїР°Р» ${customer.item} Р·Р°РІС‚СЂР°."`,
-        `РљР»РёРµРЅС‚ СЃРјРѕС‚СЂРёС‚ РјРёРјРѕ С‚РµР±СЏ: "РќР° РєР°РјРµСЂРµ Р·Р° С‚РІРѕРµР№ СЃРїРёРЅРѕР№ РєС‚Рѕ-С‚Рѕ СЃС‚РѕРёС‚."`,
-        `РљР»РёРµРЅС‚ СѓР»С‹Р±Р°РµС‚СЃСЏ СЃР»РёС€РєРѕРј С€РёСЂРѕРєРѕ: "${customer.item} РїСЂРѕР±РµР№ Р±РµР· С‡РµРєР°."`,
+        `Клиент шепчет: "Я уже покупал ${customer.item} завтра."`,
+        `Клиент смотрит мимо тебя: "На камере за твоей спиной кто-то стоит."`,
+        `Клиент улыбается слишком широко: "${customer.item} пробей без чека."`,
       ];
       return lines[Math.floor(Math.random() * lines.length)];
     }
-    if (customer.mood === 'impatient') return `РљР»РёРµРЅС‚ РЅРµСЂРІРЅРѕ СЃС‚СѓС‡РёС‚ РїРѕ РєР°СЃСЃРµ: "РњРѕР¶РЅРѕ Р±С‹СЃС‚СЂРµРµ? РњРЅРµ РЅСѓР¶РµРЅ ${customer.item}."`;
-    return `РљР»РёРµРЅС‚ СЃРїРѕРєРѕР№РЅРѕ РєР»Р°РґРµС‚ РЅР° РєР°СЃСЃСѓ: ${customer.item}.`;
+    if (customer.mood === 'impatient') return `Клиент нервно стучит по кассе: "Можно быстрее? Мне нужен ${customer.item}."`;
+    return `Клиент спокойно кладет на кассу: ${customer.item}.`;
   };
 
   const scare = (name: string) => {
@@ -1836,9 +1836,9 @@ export default function App() {
       return note;
     };
     const loreNotes = [
-      makeLoreNote([11.3, 1.05, 12.8], 'Р—Р°РїРёСЃСЊ РѕС…СЂР°РЅС‹: РєР°РјРµСЂР° Сѓ РјСѓСЃРѕСЂРєРё РѕС‚РєР»СЋС‡Р°Р»Р°СЃСЊ СЂРѕРІРЅРѕ РІ 05:12 С‚СЂРё РЅРѕС‡Рё РїРѕРґСЂСЏРґ. РџРѕСЃР»Рµ РїРѕРјРµС… РєР»РёРµРЅС‚С‹ Р·Р°Р±С‹РІР°Р»Рё, Р·Р°С‡РµРј РїСЂРёС€Р»Рё.'),
-      makeLoreNote([-15.3, 1.05, -4.6], 'РќР°РєР»Р°РґРЅР°СЏ СЃРєР»Р°РґР°: РїРѕСЃС‚Р°РІРєР° СЃ РјР°СЂРєРёСЂРѕРІРєРѕР№ РЁ-6 РїСЂРёС€Р»Р° Р±РµР· РІРѕРґРёС‚РµР»СЏ. Р’РЅСѓС‚СЂРё РєРѕСЂРѕР±РѕРє СЃР»С‹С€Р°Р»Рё РґС‹С…Р°РЅРёРµ.'),
-      makeLoreNote([5.7, 0.45, 38.8], 'РЎС‚Р°СЂР°СЏ Р·Р°РїРёСЃРєР°: РЅРµ СЃС‚РѕР№ Сѓ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ РґРѕР»СЊС€Рµ РјРёРЅСѓС‚С‹. РћРЅ СЃРЅР°С‡Р°Р»Р° РєРѕРїРёСЂСѓРµС‚ С€Р°РіРё, РїРѕС‚РѕРј РіРѕР»РѕСЃ.'),
+      makeLoreNote([11.3, 1.05, 12.8], 'Запись охраны: камера у мусорки отключалась ровно в 05:12 три ночи подряд. После помех клиенты забывали, зачем пришли.'),
+      makeLoreNote([-15.3, 1.05, -4.6], 'Накладная склада: поставка с маркировкой Ш-6 пришла без водителя. Внутри коробок слышали дыхание.'),
+      makeLoreNote([5.7, 0.45, 38.8], 'Старая записка: не стой у контейнеров дольше минуты. Он сначала копирует шаги, потом голос.'),
       makeLoreNote([-5.2, 1.22, 11.1], 'Лор: красный телефон звонит не из охраны. Это запись кассира, который пропал после смены 05:12. Он предупреждает только тех, кто еще может уйти.'),
       makeLoreNote([-17.25, 1.2, 5.2], 'Лор: зеркало показывает не отражение, а то, что стоит за тобой через несколько секунд. Если лицо клиента в зеркале черное, не держи его у кассы слишком долго.'),
       makeLoreNote([13.4, 1.05, 15.2], 'Лор: у магазина три финала. Убеги через дальний выход, вернись в магазин после погони или дай контейнеру догнать тебя. Камеры запомнят выбор.'),
@@ -1868,7 +1868,7 @@ export default function App() {
       traces.push(trace);
     }
 
-    const customers: CustomerAi[] = ['РђСЂСѓР¶Р°РЅ', 'РњР°СЂР°С‚', 'РЎС‚Р°СЂРёРє', 'РљР»РёРµРЅС‚ 05:12', 'РћС…СЂР°РЅРЅРёРє', 'РњР°РјР° СЃ РїР°РєРµС‚РѕРј', 'РќРѕС‡РЅРѕР№ РїРѕРєСѓРїР°С‚РµР»СЊ', 'РљР»РёРµРЅС‚ Р±РµР· Р»РёС†Р°'].map((_name, index) => {
+    const customers: CustomerAi[] = ['Аружан', 'Марат', 'Старик', 'Клиент 05:12', 'Охранник', 'Мама с пакетом', 'Ночной покупатель', 'Клиент без лица'].map((_name, index) => {
       const customerMesh = makeCustomer([0x2d79c7, 0x9234a8, 0x59733c, 0x111111, 0x6b1f28, 0xd8a928, 0x335a72, 0x0c0c0d][index], index);
       customerMesh.position.set(15.5 + (index % 2) * 1.2, 0, 10.6 - Math.floor(index / 2) * 1.25);
       customerMesh.visible = false;
@@ -1985,7 +1985,7 @@ export default function App() {
       keys[key] = true;
       if (key === 'q') {
         flashlight.visible = !flashlight.visible;
-        patchHud({ message: flashlight.visible ? 'Р¤РѕРЅР°СЂРёРє РІРєР»СЋС‡РµРЅ. РЎР»РµРґС‹ РІРѕР·Р»Рµ РјСѓСЃРѕСЂРєРё СЃС‚Р°Р»Рё РІРёРґРЅС‹.' : 'Р¤РѕРЅР°СЂРёРє РІС‹РєР»СЋС‡РµРЅ.' });
+        patchHud({ message: flashlight.visible ? 'Фонарик включен. Следы возле мусорки стали видны.' : 'Фонарик выключен.' });
       }
       if (key === 'e') interact();
       if (key === 'escape' && hudRef.current.phase !== 'menu') {
@@ -2244,8 +2244,8 @@ export default function App() {
             patchHud({
               fear: clamp(current.fear + 3 + nightPressure * 5, 0, 100),
               message: nightPressure > 0.55
-                ? 'РР· РґР°Р»СЊРЅРµР№ Р»РёРЅРёРё РїРѕР»РѕРє РґРѕРЅРµСЃСЃСЏ С€РµРїРѕС‚: РѕРЅ РЅР°Р·РІР°Р» С‚РІРѕРµ РёРјСЏ Рё РЅРѕРјРµСЂ РєР°СЃСЃС‹.'
-                : 'РњРµР¶РґСѓ СЃС‚РµР»Р»Р°Р¶Р°РјРё РїСЂРѕС€РµР» С‚РёС…РёР№ С€РѕСЂРѕС…, С…РѕС‚СЏ РєР»РёРµРЅС‚РѕРІ СЂСЏРґРѕРј РЅРµС‚.',
+                ? 'Из дальней линии полок донесся шепот: он назвал твое имя и номер кассы.'
+                : 'Между стеллажами прошел тихий шорох, хотя клиентов рядом нет.',
             });
           }
         }
@@ -2286,8 +2286,8 @@ export default function App() {
           phase: 'outside',
           outsideFinal: finalReady,
           message: finalReady
-            ? 'РўС‹ РІС‹С€РµР» РЅР° РїР°СЂРєРѕРІРєСѓ СЃ РјСѓСЃРѕСЂРѕРј. РљРѕРЅС‚РµР№РЅРµСЂ СЃРґРІРёРЅСѓР»СЃСЏ СЃР°Рј.'
-            : 'РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёРµ РґРІРµСЂРё СЂР°СЃРєСЂС‹Р»РёСЃСЊ. РўС‹ РІС‹С€РµР» РЅР° РїСѓСЃС‚СѓСЋ РїР°СЂРєРѕРІРєСѓ, С…РѕС‚СЏ СЃРјРµРЅР° РµС‰Рµ РЅРµ Р·Р°РєРѕРЅС‡РµРЅР°.',
+            ? 'Ты вышел на парковку с мусором. Контейнер сдвинулся сам.'
+            : 'Автоматические двери раскрылись. Ты вышел на пустую парковку, хотя смена еще не закончена.',
         });
       }
 
@@ -2328,7 +2328,7 @@ export default function App() {
             patchHud({
               served,
               fear: clamp(current.fear + 10, 0, 100),
-              message: `РљР»РёРµРЅС‚ СЂР°Р·РѕР·Р»РёР»СЃСЏ РёР·-Р·Р° РѕР¶РёРґР°РЅРёСЏ, РёР·РґР°Р» С…СЂРёРїР»С‹Р№ Р·РІСѓРє Рё СѓС€РµР» Р±РµР· РїРѕРєСѓРїРєРё: ${customer.item}.`,
+              message: `Клиент разозлился из-за ожидания, издал хриплый звук и ушел без покупки: ${customer.item}.`,
             });
             angrySound();
             if (served >= state.customers.length) completeTask('cashier');
@@ -2354,7 +2354,7 @@ export default function App() {
             playWhisperSound();
             patchHud({
               fear: clamp(current.fear + 4 + nightPressure * 8, 0, 100),
-              message: 'РЎС‚СЂР°РЅРЅС‹Р№ РєР»РёРµРЅС‚ РїРµСЂРµСЃС‚Р°Р» РёРґС‚Рё Рё РїРѕРІРµСЂРЅСѓР» РіРѕР»РѕРІСѓ Р·Р° С‚РѕР±РѕР№. РўРµР»Рѕ РѕСЃС‚Р°Р»РѕСЃСЊ СЃРјРѕС‚СЂРµС‚СЊ РІ РґСЂСѓРіСѓСЋ СЃС‚РѕСЂРѕРЅСѓ.',
+              message: 'Странный клиент перестал идти и повернул голову за тобой. Тело осталось смотреть в другую сторону.',
             });
             return;
           }
@@ -2385,8 +2385,8 @@ export default function App() {
           giveCustomerProduct(customer);
           customer.target.set(-3 + Math.random() * 2, 0, 10.2 + Math.random());
           if (customer.weird) {
-            patchHud({ message: 'РљР»РёРµРЅС‚ СЃР»РёС€РєРѕРј РґРѕР»РіРѕ СЃРјРѕС‚СЂРёС‚ РІ РєР°РјРµСЂСѓ. РќР° Р»РёС†Рµ РЅРµС‚ РјРѕСЂРіР°РЅРёСЏ.' });
-            scare(customer.item === 'РїСѓСЃС‚РѕР№ С‡РµРє' ? 'screamer-mask' : 'screamer-grin');
+            patchHud({ message: 'Клиент слишком долго смотрит в камеру. На лице нет моргания.' });
+            scare(customer.item === 'пустой чек' ? 'screamer-mask' : 'screamer-grin');
           }
         }
       });
@@ -2401,7 +2401,7 @@ export default function App() {
         current.tasks.bandits &&
         current.phase === 'shift'
       ) {
-        patchHud({ phase: 'armed', message: 'РЎРјРµРЅР° РїРѕС‡С‚Рё Р·Р°РєСЂС‹С‚Р°. РўРµРїРµСЂСЊ РІС‹РЅРµСЃРё РјСѓСЃРѕСЂ РЅР° СѓР»РёС†Сѓ, РµСЃР»Рё СЂРµС€РёС€СЊСЃСЏ.' });
+        patchHud({ phase: 'armed', message: 'Смена почти закрыта. Теперь вынеси мусор на улицу, если решишься.' });
       }
 
       if (current.tasks.cameras && current.served >= 3) {
@@ -2411,7 +2411,7 @@ export default function App() {
             bandit.mesh.visible = true;
             if (!bandit.mesh.userData.announced) {
               bandit.mesh.userData.announced = true;
-              patchHud({ message: 'РЈ РґР°Р»СЊРЅРёС… РїРѕР»РѕРє РїРѕСЏРІРёР»РёСЃСЊ Р±Р°РЅРґРёС‚С‹. РџРѕРґРѕР№РґРё Р±Р»РёР·РєРѕ Рё РЅР°Р¶РёРјР°Р№ E, С‡С‚РѕР±С‹ РѕС‚Р±РёС‚СЊСЃСЏ.' });
+              patchHud({ message: 'У дальних полок появились бандиты. Подойди близко и нажимай E, чтобы отбиться.' });
             }
           }
         });
@@ -2434,7 +2434,7 @@ export default function App() {
         } else if (Math.random() < delta * 1.2) {
           patchHud({
             health: clamp(current.health - 8, 0, 100),
-            message: 'Р‘Р°РЅРґРёС‚ СѓРґР°СЂРёР» С‚РµР±СЏ Сѓ РїСЂРѕС…РѕРґР°. РќСѓР¶РЅРѕ РѕС‚Р±РёРІР°С‚СЊСЃСЏ СЂСЏРґРѕРј РєР»Р°РІРёС€РµР№ E.',
+            message: 'Бандит ударил тебя у прохода. Нужно отбиваться рядом клавишей E.',
           });
         }
       });
@@ -2443,7 +2443,7 @@ export default function App() {
       if (current.phase === 'outside') {
         if (state.camera.position.y < 0.8 || Math.abs(state.camera.position.x) > 28 || state.camera.position.z > 64) {
           state.camera.position.set(0, 1.7, 24);
-          patchHud({ message: 'РўС‹ СЃРїРѕС‚РєРЅСѓР»СЃСЏ Сѓ РїР°СЂРєРѕРІРєРё Рё РІРµСЂРЅСѓР»СЃСЏ Рє РґРІРµСЂСЏРј РјР°РіР°Р·РёРЅР°.' });
+          patchHud({ message: 'Ты споткнулся у парковки и вернулся к дверям магазина.' });
         }
         state.rain.children.forEach((drop) => {
           drop.position.y -= Number(drop.userData.speed ?? 4) * delta;
@@ -2471,7 +2471,7 @@ export default function App() {
           state.outsideShadow.visible = true;
           patchHud({
             fear: clamp(current.fear + 7, 0, 100),
-            message: 'РЈ Р·Р°Р±РѕСЂР° РЅР° СЃРµРєСѓРЅРґСѓ РїРѕСЏРІРёР»СЃСЏ СЃРёР»СѓСЌС‚. РћРЅ СЃС‚РѕСЏР» РЅРµРїРѕРґРІРёР¶РЅРѕ, РїРѕРєР° С‚С‹ РЅРµ РјРѕСЂРіРЅСѓР».',
+            message: 'У забора на секунду появился силуэт. Он стоял неподвижно, пока ты не моргнул.',
           });
         }
         if (Math.random() < delta * 0.08) {
@@ -2483,7 +2483,7 @@ export default function App() {
           playImpactSound();
           patchHud({
             fear: clamp(current.fear + 5, 0, 100),
-            message: 'РЎРЅР°СЂСѓР¶Рё РїРѕ РјРµС‚Р°Р»Р»Сѓ СѓРґР°СЂРёР»Рё С‚Р°Рє РіСЂРѕРјРєРѕ, С‡С‚Рѕ Р·Р°РґСЂРѕР¶Р°Р»Р° РІС‹РІРµСЃРєР° 6РЁР•РЎРўРЃР РђР§РљРђ.',
+            message: 'Снаружи по металлу ударили так громко, что задрожала вывеска 6ШЕСТЁРАЧКА.',
           });
         }
         if (state.camera.position.z < 18.5) {
@@ -2560,7 +2560,7 @@ export default function App() {
 
       if (Math.random() < delta * (0.025 + nightPressure * 0.065) && current.phase === 'shift') {
         state.storeLight.intensity = state.storeLight.intensity > 1 ? 0.85 : 2.4;
-        patchHud({ message: nightPressure > 0.55 ? 'РЎРІРµС‚ РїСЂРѕРІР°Р»РёР»СЃСЏ РїРѕС‡С‚Рё РґРѕ С‚РµРјРЅРѕС‚С‹. Р—Р° СЃРїРёРЅРѕР№ РєС‚Рѕ-С‚Рѕ СЃРґРµР»Р°Р» РґРІР° Р±С‹СЃС‚СЂС‹С… С€Р°РіР°.' : 'РЎРІРµС‚ РјРѕСЂРіРЅСѓР». Р—Р° СЃРїРёРЅРѕР№ РїСЂРѕР·РІСѓС‡Р°Р»Рё С€Р°РіРё.' });
+        patchHud({ message: nightPressure > 0.55 ? 'Свет провалился почти до темноты. За спиной кто-то сделал два быстрых шага.' : 'Свет моргнул. За спиной прозвучали шаги.' });
       }
 
       if (
@@ -2587,13 +2587,13 @@ export default function App() {
           playImpactSound();
           patchHud({
             fear: clamp(current.fear + 8, 0, 100),
-            message: 'РЎ РїРѕР»РєРё СЃР°Рј СЃРѕСЂРІР°Р»СЃСЏ С‚РѕРІР°СЂ Рё СѓРґР°СЂРёР»СЃСЏ РѕР± РїРѕР». Р“РґРµ-С‚Рѕ СЂСЏРґРѕРј РєС‚Рѕ-С‚Рѕ Р±С‹СЃС‚СЂРѕ РѕС‚СЃС‚СѓРїРёР».',
+            message: 'С полки сам сорвался товар и ударился об пол. Где-то рядом кто-то быстро отступил.',
           });
         }
       }
 
       if (Math.random() < delta * (0.003 + nightPressure * 0.014) && current.phase === 'shift' && !current.cameraOpen && !current.screamer && current.served >= 2) {
-        patchHud({ message: 'РќР° СЃРµРєСѓРЅРґСѓ РІ СЃС‚РµРєР»Рµ С…РѕР»РѕРґРёР»СЊРЅРёРєР° РїРѕСЏРІРёР»РѕСЃСЊ Р»РёС†Рѕ.' });
+        patchHud({ message: 'На секунду в стекле холодильника появилось лицо.' });
         scare('screamer-mask');
       }
 
@@ -2605,7 +2605,7 @@ export default function App() {
       ) {
         patchHud({
           fear: clamp(current.fear + 14, 0, 100),
-          message: 'РЎС‚СЂР°РЅРЅС‹Р№ РєР»РёРµРЅС‚ РѕРєР°Р·Р°Р»СЃСЏ СЃР»РёС€РєРѕРј Р±Р»РёР·РєРѕ. РўС‹ СЃР»С‹С€РёС€СЊ, РєР°Рє РѕРЅ С€РµРїС‡РµС‚ С†РµРЅСѓ С‚РѕРІР°СЂР° С‚РІРѕРёРј РіРѕР»РѕСЃРѕРј.',
+          message: 'Странный клиент оказался слишком близко. Ты слышишь, как он шепчет цену товара твоим голосом.',
         });
         scare('screamer-longneck');
       }
@@ -2618,7 +2618,7 @@ export default function App() {
       ) {
         patchHud({
           fear: clamp(current.fear + 10, 0, 100),
-          message: 'РќР° РјРѕРЅРёС‚РѕСЂР°С… РѕС…СЂР°РЅС‹ РјРѕСЂРіРЅСѓР»Р° РјСѓСЃРѕСЂРєР°, С…РѕС‚СЏ С‚С‹ СЃС‚РѕРёС€СЊ РІ С‚РѕСЂРіРѕРІРѕРј Р·Р°Р»Рµ.',
+          message: 'На мониторах охраны моргнула мусорка, хотя ты стоишь в торговом зале.',
         });
         scare('screamer-trash3d');
       }
@@ -2677,7 +2677,7 @@ export default function App() {
     hum.start();
     state.audio = ctx;
     state.wind = hum;
-    patchHud({ message: 'РџСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅС‹Р№ С€СѓРј РІРєР»СЋС‡РµРЅ: РіСѓР» Р»Р°РјРї, РІРµС‚РµСЂ Рё С€РѕСЂРѕС…Рё РјР°РіР°Р·РёРЅР°.' });
+    patchHud({ message: 'Пространственный шум включен: гул ламп, ветер и шорохи магазина.' });
   };
 
   const connectMultiplayer = (roomValue: string) => {
@@ -2822,7 +2822,7 @@ export default function App() {
     const state = engine.current;
     if (!state) return;
     state.flashlight.visible = !state.flashlight.visible;
-    patchHud({ message: state.flashlight.visible ? 'Р¤РѕРЅР°СЂРёРє РІРєР»СЋС‡РµРЅ.' : 'Р¤РѕРЅР°СЂРёРє РІС‹РєР»СЋС‡РµРЅ.' });
+    patchHud({ message: state.flashlight.visible ? 'Фонарик включен.' : 'Фонарик выключен.' });
   };
 
   const setMobileRun = (value: boolean) => {
@@ -2910,7 +2910,7 @@ export default function App() {
       patchHud({
         phase: 'shift',
         outsideFinal: false,
-        message: 'РўС‹ РІРµСЂРЅСѓР»СЃСЏ РІ РјР°РіР°Р·РёРЅ С‡РµСЂРµР· Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРµ РґРІРµСЂРё. РЎРЅР°СЂСѓР¶Рё С‡С‚Рѕ-С‚Рѕ РѕСЃС‚Р°Р»РѕСЃСЊ РІРѕР·Р»Рµ РїР°СЂРєРѕРІРєРё.',
+        message: 'Ты вернулся в магазин через автоматические двери. Снаружи что-то осталось возле парковки.',
       });
       return;
     }
@@ -2956,7 +2956,7 @@ export default function App() {
     const lore = state.loreNotes.find((item) => item.visible && item.position.distanceTo(pos) < 2);
     if (lore) {
       lore.visible = false;
-      patchHud({ message: String(lore.userData.lore ?? 'Р—Р°РїРёСЃСЊ СЃС‚РµСЂС‚Р°. РћСЃС‚Р°Р»СЃСЏ С‚РѕР»СЊРєРѕ Р·Р°РїР°С… РјРѕРєСЂРѕР№ Р±СѓРјР°РіРё.'), fear: clamp(current.fear + 8, 0, 100) });
+      patchHud({ message: String(lore.userData.lore ?? 'Запись стерта. Остался только запах мокрой бумаги.'), fear: clamp(current.fear + 8, 0, 100) });
       return;
     }
 
@@ -2967,7 +2967,7 @@ export default function App() {
         patchHud({
           heldItem: null,
           heldItemFromStock: false,
-          message: `${current.heldItem} Р»РµР¶РёС‚ РІ ${cart.userData.kind === 'basket' ? 'РєРѕСЂР·РёРЅРµ' : 'С‚РµР»РµР¶РєРµ'}. Р’РЅСѓС‚СЂРё С‚РѕРІР°СЂРѕРІ: ${cart.userData.items}.`,
+          message: `${current.heldItem} лежит в ${cart.userData.kind === 'basket' ? 'корзине' : 'тележке'}. Внутри товаров: ${cart.userData.items}.`,
         });
         return;
       }
@@ -2976,8 +2976,8 @@ export default function App() {
       cart.userData.follow = nextFollow;
       patchHud({
         message: nextFollow
-          ? cart.userData.kind === 'basket' ? 'РўС‹ РІР·СЏР» СЂСѓС‡РЅСѓСЋ РєРѕСЂР·РёРЅСѓ. РћРЅР° РґРµСЂР¶РёС‚СЃСЏ РїРµСЂРµРґ С‚РѕР±РѕР№.' : 'РўС‹ РІР·СЏР» С‚РµР»РµР¶РєСѓ. РћРЅР° РєР°С‚РёС‚СЃСЏ РїРµСЂРµРґ С‚РѕР±РѕР№.'
-          : cart.userData.kind === 'basket' ? 'РўС‹ РїРѕСЃС‚Р°РІРёР» РєРѕСЂР·РёРЅСѓ.' : 'РўС‹ РѕС‚РїСѓСЃС‚РёР» С‚РµР»РµР¶РєСѓ.',
+          ? cart.userData.kind === 'basket' ? 'Ты взял ручную корзину. Она держится перед тобой.' : 'Ты взял тележку. Она катится перед тобой.'
+          : cart.userData.kind === 'basket' ? 'Ты поставил корзину.' : 'Ты отпустил тележку.',
       });
       return;
     }
@@ -2989,12 +2989,12 @@ export default function App() {
         heldItem: productName,
         heldItemFromStock: true,
         inventory: current.inventory + 1,
-        message: `РўС‹ РІР·СЏР» РёР· РєРѕСЂРѕР±РєРё: ${productName}. РћС‚РЅРµСЃРё С‚РѕРІР°СЂ Рє РїСѓСЃС‚РѕРјСѓ РјРµСЃС‚Сѓ РЅР° РїРѕР»РєРµ Рё РЅР°Р¶РјРё E.`,
+        message: `Ты взял из коробки: ${productName}. Отнеси товар к пустому месту на полке и нажми E.`,
       });
       return;
     }
     if (stockCrate && current.heldItem) {
-      patchHud({ message: `Р СѓРєРё Р·Р°РЅСЏС‚С‹: ${current.heldItem}. РЎРЅР°С‡Р°Р»Р° РїРѕР»РѕР¶Рё С‚РѕРІР°СЂ РЅР° РЅСѓР¶РЅСѓСЋ РїРѕР»РєСѓ, РІ РєРѕСЂР·РёРЅСѓ РёР»Рё С‚РµР»РµР¶РєСѓ.` });
+      patchHud({ message: `Руки заняты: ${current.heldItem}. Сначала положи товар на нужную полку, в корзину или тележку.` });
       return;
     }
 
@@ -3002,18 +3002,18 @@ export default function App() {
     if (bandit) {
       bandit.health -= 1;
       bandit.mesh.position.add(bandit.mesh.position.clone().sub(pos).normalize().multiplyScalar(1.3));
-      patchHud({ message: 'РўС‹ РѕС‚Р±РёР»СЃСЏ РѕС‚ Р±Р°РЅРґРёС‚Р°. Р’ РїСЂРѕС…РѕРґРµ СЃРЅРѕРІР° СЃР»С‹С€РµРЅ С‡СѓР¶РѕР№ Р±РµРі.' });
+      patchHud({ message: 'Ты отбился от бандита. В проходе снова слышен чужой бег.' });
       if (bandit.health <= 0) {
         bandit.active = false;
         bandit.mesh.visible = false;
-        patchHud({ message: 'Р‘Р°РЅРґРёС‚ СѓР±РµР¶Р°Р» РІ С‚РµРјРЅС‹Р№ РїСЂРѕС…РѕРґ. РќРѕ Р·Р° С…РѕР»РѕРґРёР»СЊРЅРёРєР°РјРё РєС‚Рѕ-С‚Рѕ РµС‰Рµ РґС‹С€РёС‚.' });
+        patchHud({ message: 'Бандит убежал в темный проход. Но за холодильниками кто-то еще дышит.' });
       }
       return;
     }
 
     const visibleProduct = state.stockObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.25);
     if (visibleProduct && !current.heldItem) {
-      const productName = String(visibleProduct.userData.product ?? 'С‚РѕРІР°СЂ');
+      const productName = String(visibleProduct.userData.product ?? 'товар');
       visibleProduct.visible = false;
       const marker = visibleProduct.userData.slotMarker as THREE.Object3D | undefined;
       if (marker) marker.visible = true;
@@ -3021,7 +3021,7 @@ export default function App() {
         heldItem: productName,
         heldItemFromStock: false,
         inventory: current.inventory + 1,
-        message: `РўС‹ РІР·СЏР» С‚РѕРІР°СЂ СЃ РїРѕР»РєРё: ${productName}. Р­С‚Рѕ РґР»СЏ РєРѕСЂР·РёРЅС‹/С‚РµР»РµР¶РєРё. Р”Р»СЏ РїРѕРїРѕР»РЅРµРЅРёСЏ Р±РµСЂРё С‚РѕРІР°СЂ РёР· РєРѕСЂРѕР±РѕРє РЅР° СЃРєР»Р°РґРµ.`,
+        message: `Ты взял товар с полки: ${productName}. Это для корзины/тележки. Для пополнения бери товар из коробок на складе.`,
       });
       return;
     }
@@ -3043,7 +3043,7 @@ export default function App() {
       customer.mesh.children.filter((child) => child.name === 'carriedProduct').forEach((child) => customer.mesh.remove(child));
       customer.mesh.userData.carryingProduct = false;
       const served = current.served + 1;
-      patchHud({ served, message: `${getCustomerAiLine(customer)} РџСЂРѕР±РёС‚ С‚РѕРІР°СЂ: ${customer.item}. РљР»РёРµРЅС‚ СѓС…РѕРґРёС‚ РёР· РјР°РіР°Р·РёРЅР°.` });
+      patchHud({ served, message: `${getCustomerAiLine(customer)} Пробит товар: ${customer.item}. Клиент уходит из магазина.` });
       if (served >= state.customers.length) completeTask('cashier');
       if (customer.weird) scare('screamer-longneck');
       return;
@@ -3059,7 +3059,7 @@ export default function App() {
         stocked,
         heldItem: null,
         heldItemFromStock: false,
-        message: `РџРѕР»РєР° РїРѕРїРѕР»РЅРµРЅР° С‚РѕРІР°СЂРѕРј РёР· РєРѕСЂРѕР±РєРё: ${current.heldItem}.`,
+        message: `Полка пополнена товаром из коробки: ${current.heldItem}.`,
       });
       if (stocked === 2) scare('screamer-grin');
       if (stocked === 7) scare('screamer-longneck');
@@ -3068,17 +3068,17 @@ export default function App() {
       return;
     }
     if (nearbyEmptySlots.length > 0 && current.heldItem && current.heldItemFromStock) {
-      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'РЅСѓР¶РЅС‹Р№ С‚РѕРІР°СЂ');
-      patchHud({ message: `Р­С‚Р° РїРѕР»РєР° Р¶РґРµС‚ РґСЂСѓРіРѕР№ С‚РѕРІР°СЂ: ${required}. Р’РѕР·СЊРјРё РїСЂР°РІРёР»СЊРЅСѓСЋ РєРѕСЂРѕР±РєСѓ РЅР° СЃРєР»Р°РґРµ.` });
+      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'нужный товар');
+      patchHud({ message: `Эта полка ждет другой товар: ${required}. Возьми правильную коробку на складе.` });
       return;
     }
     if (nearbyEmptySlots.length > 0 && current.heldItem && !current.heldItemFromStock) {
-      patchHud({ message: 'Р­С‚РёРј РЅРµР»СЊР·СЏ РїРѕРїРѕР»РЅРёС‚СЊ РїРѕР»РєСѓ. Р’РѕР·СЊРјРё РЅРѕРІС‹Р№ С‚РѕРІР°СЂ РёР· РєРѕСЂРѕР±РєРё РЅР° СЃРєР»Р°РґРµ.' });
+      patchHud({ message: 'Этим нельзя пополнить полку. Возьми новый товар из коробки на складе.' });
       return;
     }
     if (nearbyEmptySlots.length > 0 && !current.heldItem) {
-      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'С‚РѕРІР°СЂ');
-      patchHud({ message: `РџСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ РЅР° РїРѕР»РєРµ. РќСѓР¶РµРЅ С‚РѕРІР°СЂ РёР· РєРѕСЂРѕР±РєРё: ${required}.` });
+      const required = String(nearbyEmptySlots[0].userData.requiredProduct ?? 'товар');
+      patchHud({ message: `Пустое место на полке. Нужен товар из коробки: ${required}.` });
       return;
     }
     if (current.phase === 'outside' && current.heldItem === 'Trash bag' && near(state.dumpster, 5.5)) {
@@ -3103,7 +3103,7 @@ export default function App() {
     const trash = state.trashObjects.find((item) => item.visible && item.position.distanceTo(pos) < 2.2);
     if (trash) {
       if (current.heldItem && current.heldItem !== 'Trash bag') {
-        patchHud({ message: 'Р СѓРєРё Р·Р°РЅСЏС‚С‹. РЎРЅР°С‡Р°Р»Р° РїРѕР»РѕР¶Рё С‚РѕРІР°СЂ РЅР° РїРѕР»РєСѓ, РІ РєРѕСЂР·РёРЅСѓ РёР»Рё С‚РµР»РµР¶РєСѓ, РїРѕС‚РѕРј СЃРѕР±РёСЂР°Р№ РјСѓСЃРѕСЂ.' });
+        patchHud({ message: 'Руки заняты. Сначала положи товар на полку, в корзину или тележку, потом собирай мусор.' });
         return;
       }
       trash.visible = false;
@@ -3112,7 +3112,7 @@ export default function App() {
         trash: count,
         heldItem: 'Trash bag',
         heldItemFromStock: false,
-        message: count >= state.trashObjects.length ? 'РњСѓСЃРѕСЂ СЃРѕР±СЂР°РЅ РІ РѕРґРёРЅ С‚СЏР¶РµР»С‹Р№ РїР°РєРµС‚. РўРµРїРµСЂСЊ РІС‹РЅРµСЃРё РµРіРѕ Рє РєРѕРЅС‚РµР№РЅРµСЂСѓ РЅР° СѓР»РёС†Рµ.' : `РњСѓСЃРѕСЂ СЃРѕР±СЂР°РЅ: ${count}/${state.trashObjects.length}. РќР°Р№РґРё РѕСЃС‚Р°Р»СЊРЅС‹Рµ РїР°РєРµС‚С‹ РІ РјР°РіР°Р·РёРЅРµ.`,
+        message: count >= state.trashObjects.length ? 'Мусор собран в один тяжелый пакет. Теперь вынеси его к контейнеру на улице.' : `Мусор собран: ${count}/${state.trashObjects.length}. Найди остальные пакеты в магазине.`,
       });
       if (count === 1) scare('screamer-dust');
       if (count >= state.trashObjects.length) completeTask('trash');
@@ -3121,7 +3121,7 @@ export default function App() {
     if (near(state.cameraDesk, 2.5)) {
       completeTask('cameras');
       const cameraOpen = !current.cameraOpen;
-      patchHud({ cameraOpen, message: cameraOpen ? 'РљР°РјРµСЂС‹ РѕС‚РєСЂС‹С‚С‹. РќР° РѕРґРЅРѕР№ РёР· РЅРёС… РІРёРґРЅР° РјСѓСЃРѕСЂРєР°.' : 'РљР°РјРµСЂС‹ Р·Р°РєСЂС‹С‚С‹.' });
+      patchHud({ cameraOpen, message: cameraOpen ? 'Камеры открыты. На одной из них видна мусорка.' : 'Камеры закрыты.' });
       if (cameraOpen) scare('screamer-mask');
       return;
     }
@@ -3147,12 +3147,12 @@ export default function App() {
         phase: 'outside',
         outsideFinal: finalReady,
         message: finalReady
-          ? 'Final outside scene: night, fog, street lamps. The monster crawls out of the dumpster.'
-          : 'You stepped outside early. The parking lot is empty, but something breathes near the dumpsters.',
+          ? 'Финальная улица: ночь, туман, фонари. Монстр вылезает из контейнера.'
+          : 'Ты вышел на улицу раньше времени. Парковка пустая, но возле контейнеров кто-то дышит.',
       });
       return;
     }
-    patchHud({ message: 'Move closer to an object: red phone, checkout, shelf, trash, cameras, fridge, cart, or automatic doors.' });
+    patchHud({ message: 'Подойди ближе к объекту: красный телефон, касса, полка, мусор, камеры, холодильник, тележка или автоматические двери.' });
   };
 
   const endingCopy = hud.ending === 'rescue'
@@ -3178,15 +3178,15 @@ export default function App() {
 
       {hud.phase === 'menu' && (
         <section className="title-screen">
-          <h1>Shesterochka Horror</h1>
-          <p>First-person 3D horror about a night shift cashier. Serve customers, restock shelves, check cameras, collect trash, and survive the monster outside.</p>
-          <p className="menu-atmosphere">Phone location: red blinking phone on the checkout counter. Press E near it.</p>
+          <h1>Шестёрочка Horror</h1>
+          <p>3D-хоррор от первого лица про ночную смену кассира. Обслуживай клиентов, пополняй полки, проверяй камеры, собирай мусор и выживи на улице.</p>
+          <p className="menu-atmosphere">Телефон: красная мигающая трубка на кассе. Подойди и нажми E.</p>
           <div className="guest-login-actions">
-            <button type="button" className="ghost" onClick={() => setReviewsOpen(true)}>Reviews</button>
-            <button type="button" onClick={() => startGame(false)}>Play Solo</button>
-            <button type="button" className="ghost" onClick={() => startGame(true)}>Local Co-op</button>
+            <button type="button" className="ghost" onClick={() => setReviewsOpen(true)}>Отзывы</button>
+            <button type="button" onClick={() => startGame(false)}>Играть одному</button>
+            <button type="button" className="ghost" onClick={() => startGame(true)}>Играть вдвоем</button>
             <label className="room-field">
-              Room
+              Комната
               <input
                 type="text"
                 maxLength={24}
@@ -3194,23 +3194,23 @@ export default function App() {
                 onChange={(event) => setOnlineRoom(event.target.value)}
               />
             </label>
-            <button type="button" className="ghost" onClick={() => startGame('online')}>Online room</button>
-            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Cashier Skins</button>
-            <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Login</button>
-            <span>{session?.user.email ? `Signed in: ${session.user.email}` : 'Guest: progress is saved on this device'}</span>
-            <span>Skin: {selectedSkin.name}</span>
+            <button type="button" className="ghost" onClick={() => startGame('online')}>Онлайн-комната</button>
+            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Скины кассира</button>
+            <button type="button" className="ghost" onClick={() => setAuthOpen(true)}>Войти</button>
+            <span>{session?.user.email ? `Вход: ${session.user.email}` : 'Гость: прогресс сохранится на этом устройстве'}</span>
+            <span>Скин: {selectedSkin.name}</span>
           </div>
         </section>
       )}
 
       <div className="account-panel">
-        <span>{session?.user.email ?? 'Guest'}</span>
-        <span>{onlineMode ? `Online: ${onlineRoom}` : coopMode ? 'Co-op: I/J/K/L' : 'Solo'}</span>
-        {!session && <button type="button" onClick={() => setAuthOpen(true)}>Login</button>}
-        <button type="button" onClick={() => setSkinsOpen(true)}>Skins</button>
-        <button type="button" onClick={() => setReviewsOpen(true)}>Reviews</button>
-        <button type="button" onClick={() => setSettingsOpen(true)}>Settings</button>
-        <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini Help</button>
+        <span>{session?.user.email ?? 'Гость'}</span>
+        <span>{onlineMode ? `Онлайн: ${onlineRoom}` : coopMode ? 'Вдвоем: I/J/K/L' : 'Один игрок'}</span>
+        {!session && <button type="button" onClick={() => setAuthOpen(true)}>Войти</button>}
+        <button type="button" onClick={() => setSkinsOpen(true)}>Скины</button>
+        <button type="button" onClick={() => setReviewsOpen(true)}>Отзывы</button>
+        <button type="button" onClick={() => setSettingsOpen(true)}>Настройки</button>
+        <button type="button" onClick={() => setGeminiOpen((value) => !value)}>Gemini</button>
       </div>
 
       {authOpen && (
@@ -3223,46 +3223,46 @@ export default function App() {
       {reviewsOpen && (
         <section className="reviews-screen">
           <div className="reviews-panel">
-            <span className="menu-kicker">Player feedback</span>
-            <h2>РћС‚Р·С‹РІС‹ РѕР± РёРіСЂРµ</h2>
+            <span className="menu-kicker">Отзывы игроков</span>
+            <h2>Отзывы об игре</h2>
             <form className="review-form" onSubmit={addReview}>
               <label>
-                РРјСЏ
+                Имя
                 <input
                   type="text"
                   maxLength={32}
-                  placeholder="РРіСЂРѕРє"
+                  placeholder="Игрок"
                   value={reviewName}
                   onChange={(event) => setReviewName(event.target.value)}
                 />
               </label>
               <label>
-                РћС†РµРЅРєР°
+                Оценка
                 <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))}>
-                  <option value={5}>5 - РѕС‚Р»РёС‡РЅРѕ</option>
-                  <option value={4}>4 - С…РѕСЂРѕС€Рѕ</option>
-                  <option value={3}>3 - РЅРѕСЂРјР°Р»СЊРЅРѕ</option>
-                  <option value={2}>2 - РЅР°РґРѕ СѓР»СѓС‡С€РёС‚СЊ</option>
-                  <option value={1}>1 - РїР»РѕС…Рѕ</option>
+                  <option value={5}>5 - отлично</option>
+                  <option value={4}>4 - хорошо</option>
+                  <option value={3}>3 - нормально</option>
+                  <option value={2}>2 - надо улучшить</option>
+                  <option value={1}>1 - плохо</option>
                 </select>
               </label>
               <label className="review-text-field">
-                РћС‚Р·С‹РІ
+                Отзыв
                 <textarea
                   maxLength={420}
-                  placeholder="РќР°РїРёС€Рё, С‡С‚Рѕ СѓР»СѓС‡С€РёС‚СЊ: РјРѕРЅСЃС‚СЂР°, СЃРІРµС‚, РєР»РёРµРЅС‚РѕРІ, СѓР»РёС†Сѓ, СЃРєСЂРёРјРµСЂС‹..."
+                  placeholder="Напиши, что улучшить: монстра, свет, клиентов, улицу, скримеры..."
                   value={reviewText}
                   onChange={(event) => setReviewText(event.target.value)}
                 />
               </label>
-              <button type="submit">РћСЃС‚Р°РІРёС‚СЊ РѕС‚Р·С‹РІ</button>
+              <button type="submit">Оставить отзыв</button>
             </form>
             <div className="reviews-list">
               {reviews.map((review) => (
                 <article key={review.id}>
                   <div>
                     <b>{review.name}</b>
-                    <span>{'в…'.repeat(review.rating)}{'в†'.repeat(5 - review.rating)}</span>
+                    <span>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
                   </div>
                   <p>{review.text}</p>
                   <time>{new Date(review.createdAt).toLocaleDateString('ru-RU')}</time>
@@ -3270,8 +3270,8 @@ export default function App() {
               ))}
             </div>
             <div className="menu-actions">
-              <button type="button" className="ghost" onClick={() => setReviews(defaultReviews)}>РЎР±СЂРѕСЃРёС‚СЊ РѕС‚Р·С‹РІС‹</button>
-              <button type="button" onClick={() => setReviewsOpen(false)}>Р—Р°РєСЂС‹С‚СЊ</button>
+              <button type="button" className="ghost" onClick={() => setReviews(defaultReviews)}>Сбросить отзывы</button>
+              <button type="button" onClick={() => setReviewsOpen(false)}>Закрыть</button>
             </div>
           </div>
         </section>
@@ -3279,13 +3279,13 @@ export default function App() {
 
       {paused && hud.phase !== 'menu' && (
         <section className="pause-screen">
-          <span className="menu-kicker">Paused</span>
-          <h2>Shift suspended</h2>
+          <span className="menu-kicker">Пауза</span>
+          <h2>Смена остановлена</h2>
           <div className="menu-actions">
-            <button type="button" onClick={() => setPaused(false)}>Resume</button>
-            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Cashier skins</button>
-            <button type="button" className="ghost" onClick={() => setSettingsOpen(true)}>Settings</button>
-            <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu' })}>Main menu</button>
+            <button type="button" onClick={() => setPaused(false)}>Продолжить</button>
+            <button type="button" className="ghost" onClick={() => setSkinsOpen(true)}>Скины кассира</button>
+            <button type="button" className="ghost" onClick={() => setSettingsOpen(true)}>Настройки</button>
+            <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu' })}>Главный экран</button>
           </div>
         </section>
       )}
@@ -3293,8 +3293,8 @@ export default function App() {
       {skinsOpen && (
         <section className="skins-screen">
           <div className="skins-panel">
-            <span className="menu-kicker">Locker room</span>
-            <h2>РЎРєРёРЅС‹ РєР°СЃСЃРёСЂР°</h2>
+            <span className="menu-kicker">Раздевалка</span>
+            <h2>Скины кассира</h2>
             <div className="skin-showcase" aria-hidden="true">
               <div className="cashier-model-preview">
                 <i className="preview-head" style={{ background: `#${selectedSkin.skin.toString(16).padStart(6, '0')}` }} />
@@ -3313,7 +3313,7 @@ export default function App() {
                 <span>{selectedSkin.description}</span>
               </div>
             </div>
-            <p>РЎРєРёРЅ РјРµРЅСЏРµС‚ СЂСѓРєРё РёРіСЂРѕРєР° РІ РїРµСЂРІРѕРј Р»РёС†Рµ: СЂСѓРєР°РІР°, РїРµСЂС‡Р°С‚РєРё Рё Р±РµР№РґР¶. РЎРµР№С‡Р°СЃ РЅР°РґРµС‚Рѕ: <b>{selectedSkin.name}</b>.</p>
+            <p>Скин меняет руки игрока в первом лице: рукава, перчатки и бейдж. Сейчас надето: <b>{selectedSkin.name}</b>.</p>
             <div className="skin-grid">
               {cashierSkins.map((skin) => (
                 <article key={skin.id} className={skin.id === equippedSkin ? 'active' : ''}>
@@ -3325,14 +3325,14 @@ export default function App() {
                   <h3>{skin.name}</h3>
                   <span>{skin.description}</span>
                   <button type="button" onClick={() => equipSkin(skin.id)}>
-                    {skin.id === equippedSkin ? 'РќР°РґРµС‚Рѕ' : 'РќР°РґРµС‚СЊ'}
+                    {skin.id === equippedSkin ? 'Надето' : 'Надеть'}
                   </button>
                 </article>
               ))}
             </div>
             <div className="menu-actions">
-              <button type="button" className="ghost" onClick={removeSkin}>РЎРЅСЏС‚СЊ СЃРєРёРЅ</button>
-              <button type="button" onClick={() => setSkinsOpen(false)}>Р—Р°РєСЂС‹С‚СЊ</button>
+              <button type="button" className="ghost" onClick={removeSkin}>Снять скин</button>
+              <button type="button" onClick={() => setSkinsOpen(false)}>Закрыть</button>
             </div>
           </div>
         </section>
@@ -3341,21 +3341,21 @@ export default function App() {
       {settingsOpen && (
         <section className="settings-screen">
           <div className="settings-panel">
-            <span className="menu-kicker">Options</span>
-            <h2>Steam-style settings</h2>
+            <span className="menu-kicker">Опции</span>
+            <h2>Настройки игры</h2>
             <label>
-              Graphics
+              Графика
               <select
                 value={settings.graphics}
                 onChange={(event) => setSettings((current) => ({ ...current, graphics: event.target.value as GameSettings['graphics'] }))}
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low">Низкая</option>
+                <option value="medium">Средняя</option>
+                <option value="high">Высокая</option>
               </select>
             </label>
             <label>
-              Volume {settings.volume}%
+              Громкость {settings.volume}%
               <input
                 type="range"
                 min="0"
@@ -3365,7 +3365,7 @@ export default function App() {
               />
             </label>
             <label>
-              Touch sensitivity {settings.sensitivity}%
+              Чувствительность на телефоне {settings.sensitivity}%
               <input
                 type="range"
                 min="10"
@@ -3380,7 +3380,7 @@ export default function App() {
                 checked={settings.showHud}
                 onChange={(event) => setSettings((current) => ({ ...current, showHud: event.target.checked }))}
               />
-              Show HUD
+              Показывать HUD
             </label>
             <label className="check-row">
               <input
@@ -3388,28 +3388,28 @@ export default function App() {
                 checked={settings.mobileControls}
                 onChange={(event) => setSettings((current) => ({ ...current, mobileControls: event.target.checked }))}
               />
-              Mobile controls
+              Управление на телефоне
             </label>
-            <button type="button" onClick={() => setSettingsOpen(false)}>Close</button>
+            <button type="button" onClick={() => setSettingsOpen(false)}>Закрыть</button>
           </div>
         </section>
       )}
 
       {geminiOpen && (
         <section className="gemini-panel">
-          <b>Gemini РїРѕ РЁРµСЃС‚С‘СЂРѕС‡РєР° Horror</b>
+          <b>Gemini по Шестёрочка Horror</b>
           <form onSubmit={askGemini}>
             <textarea
-              placeholder="РЎРїСЂРѕСЃРё: С‡С‚Рѕ РґРµР»Р°С‚СЊ РґР°Р»СЊС€Рµ, РіРґРµ РјСѓСЃРѕСЂ, РєР°Рє СЃР±РµР¶Р°С‚СЊ РѕС‚ РјРѕРЅСЃС‚СЂР°..."
+              placeholder="Спроси: что делать дальше, где мусор, как сбежать от монстра..."
               value={geminiPrompt}
               onChange={(e) => setGeminiPrompt(e.target.value)}
             />
             <button type="submit" disabled={geminiBusy}>
-              {geminiBusy ? 'Р”СѓРјР°СЋ...' : 'РЎРїСЂРѕСЃРёС‚СЊ'}
+              {geminiBusy ? 'Думаю...' : 'Спросить'}
             </button>
           </form>
           <div className="gemini-quick">
-            {['Р§С‚Рѕ РґРµР»Р°С‚СЊ РґР°Р»СЊС€Рµ?', 'РљР°Рє РЅРµ СѓРјРµСЂРµС‚СЊ РЅР° СѓР»РёС†Рµ?', 'Р“РґРµ РёСЃРєР°С‚СЊ РјСѓСЃРѕСЂ?', 'РљР°Рє СЂР°Р±РѕС‚Р°СЋС‚ РєР»РёРµРЅС‚С‹?', 'РџРѕС‡РµРјСѓ РєР»РёРµРЅС‚ Р·Р»РёС‚СЃСЏ?', 'Р§С‚Рѕ РґРµР»Р°РµС‚ РјРѕРЅСЃС‚СЂ?'].map((question) => (
+            {['Что делать дальше?', 'Как не умереть на улице?', 'Где искать мусор?', 'Как работают клиенты?', 'Почему клиент злится?', 'Что делает монстр?'].map((question) => (
               <button
                 key={question}
                 type="button"
@@ -3430,40 +3430,40 @@ export default function App() {
 
       {settings.showHud && <section className="hud3d">
         <div>
-          <b>{hud.phase === 'dead' ? 'You died' : hud.phase === 'outside' ? 'Final: outside' : 'Night shift'}</b>
+          <b>{hud.phase === 'dead' ? 'Ты погиб' : hud.phase === 'outside' ? 'Финал: улица' : 'Ночная смена'}</b>
           <span>{hud.message}</span>
-          {hud.heldItem ? <em>Holding: {hud.heldItem}</em> : null}
+          {hud.heldItem ? <em>В руках: {hud.heldItem}</em> : null}
         </div>
         <div className="bars">
-          <label>Health <i style={{ width: `${hud.health}%` }} /></label>
-          <label>Battery <i style={{ width: `${hud.battery}%` }} /></label>
-          <label>Fear <i style={{ width: `${hud.fear}%` }} /></label>
+          <label>Здоровье <i style={{ width: `${hud.health}%` }} /></label>
+          <label>Батарея <i style={{ width: `${hud.battery}%` }} /></label>
+          <label>Страх <i style={{ width: `${hud.fear}%` }} /></label>
         </div>
       </section>}
 
       {settings.showHud && <aside className="quest-log">
-        <b>Tasks</b>
-        <span className={hud.tasks.phone ? 'done' : ''}>E: answer red phone at checkout</span>
-        <span className={hud.tasks.cashier ? 'done' : ''}>Serve customers: {hud.served}/8</span>
-        <span className={hud.tasks.stock ? 'done' : ''}>Restock shelves: {hud.stocked}/18</span>
-        <span className={hud.tasks.trash ? 'done' : ''}>Collect trash: {hud.trash}/3</span>
-        <span className={hud.tasks.cameras ? 'done' : ''}>Check security cameras</span>
-        <span className={hud.tasks.bandits ? 'done' : ''}>Fight off bandits</span>
-        <span className={hud.tasks.outside ? 'done' : ''}>Take trash outside</span>
+        <b>Задания</b>
+        <span className={hud.tasks.phone ? 'done' : ''}>E: ответить на красный телефон у кассы</span>
+        <span className={hud.tasks.cashier ? 'done' : ''}>Обслужить клиентов: {hud.served}/8</span>
+        <span className={hud.tasks.stock ? 'done' : ''}>Пополнить полки: {hud.stocked}/18</span>
+        <span className={hud.tasks.trash ? 'done' : ''}>Собрать мусор: {hud.trash}/3</span>
+        <span className={hud.tasks.cameras ? 'done' : ''}>Проверить камеры охраны</span>
+        <span className={hud.tasks.bandits ? 'done' : ''}>Отбиться от бандитов</span>
+        <span className={hud.tasks.outside ? 'done' : ''}>Вынести мусор на улицу</span>
       </aside>}
 
       {settings.showHud && <div className="controls-note">
-        WASD - move · Shift - run · Mouse - look · E - interact · Q - flashlight · Esc - menu
-        {hud.phase === 'dead' ? <strong>Press E to respawn near the automatic doors</strong> : null}
-        {!hud.locked && hud.phase !== 'menu' && hud.phase !== 'dead' ? <strong>Click the game to lock mouse</strong> : null}
+        WASD - ходьба · Shift - бег · Мышь - обзор · E - действие · Q - фонарик · Esc - меню
+        {hud.phase === 'dead' ? <strong>Нажми E, чтобы появиться у автоматических дверей</strong> : null}
+        {!hud.locked && hud.phase !== 'menu' && hud.phase !== 'dead' ? <strong>Кликни по игре, чтобы включить мышь</strong> : null}
       </div>}
 
       {hud.phase === 'dead' && (
         <section className="death-screen">
-          <h2>{endingCopy?.title ?? 'You died'}</h2>
-          <p>{endingCopy?.text ?? 'The monster dragged you away from the dumpsters. Respawn near the store doors and try the outside route again.'}</p>
-          <button type="button" onClick={interact}>Respawn</button>
-          <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', health: 100, fear: 0, ending: null })}>Main menu</button>
+          <h2>{endingCopy?.title ?? 'Ты погиб'}</h2>
+          <p>{endingCopy?.text ?? 'Монстр утащил тебя от контейнеров. Появись у дверей магазина и попробуй выйти на улицу снова.'}</p>
+          <button type="button" onClick={interact}>Возродиться</button>
+          <button type="button" className="ghost" onClick={() => patchHud({ phase: 'menu', health: 100, fear: 0, ending: null })}>Главный экран</button>
         </section>
       )}
 
@@ -3498,10 +3498,10 @@ export default function App() {
             onPointerCancel={handleLookEnd}
           />
           <div className="mobile-buttons">
-            <button type="button" onPointerDown={() => setMobileRun(true)} onPointerUp={() => setMobileRun(false)} onPointerCancel={() => setMobileRun(false)}>Run</button>
+            <button type="button" onPointerDown={() => setMobileRun(true)} onPointerUp={() => setMobileRun(false)} onPointerCancel={() => setMobileRun(false)}>Бег</button>
             <button type="button" onClick={interact}>E</button>
-            <button type="button" onClick={toggleFlashlight}>Light</button>
-            <button type="button" className="ghost" onClick={() => setPaused(true)}>Pause</button>
+            <button type="button" onClick={toggleFlashlight}>Свет</button>
+            <button type="button" className="ghost" onClick={() => setPaused(true)}>Пауза</button>
           </div>
         </div>
       )}
@@ -3515,7 +3515,7 @@ export default function App() {
             <i>PARKING</i>
             <i>TRASH ZONE</i>
           </div>
-          <span>РџРѕРјРµС…Рё. РљРѕРЅС‚РµР№РЅРµСЂС‹. Р§С‚Рѕ-С‚Рѕ РґРІРёР¶РµС‚СЃСЏ РІРЅСѓС‚СЂРё РјСѓСЃРѕСЂРєРё.</span>
+          <span>Помехи. Контейнеры. Что-то движется внутри мусорки.</span>
         </div>
       )}
 
